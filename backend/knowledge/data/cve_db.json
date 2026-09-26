@@ -1,0 +1,90 @@
+{
+  "CVE-2024-3400": {
+    "description": "A command injection vulnerability in the GlobalProtect feature of Palo Alto Networks PAN-OS software for specific PAN-OS versions and distinct feature configurations may enable an unauthenticated attacker to execute arbitrary code with root privileges on the firewall.",
+    "cvss_v3": 10.0,
+    "severity": "critical",
+    "cwe": ["CWE-77", "CWE-78"],
+    "published": "2024-04-12",
+    "vendor": "Palo Alto Networks",
+    "product": "PAN-OS / Ivanti Connect Secure (class of GlobalProtect-style command injection)",
+    "exploit_available": true,
+    "references": ["https://security.paloaltonetworks.com/CVE-2024-3400"]
+  },
+  "CVE-2017-0144": {
+    "description": "The SMBv1 server in Microsoft Windows allows remote attackers to execute arbitrary code via crafted packets, aka 'Windows SMB Remote Code Execution Vulnerability'. This vulnerability is known as EternalBlue and was used in the WannaCry and NotPetya outbreaks.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": ["CWE-119", "CWE-787"],
+    "published": "2017-03-16",
+    "vendor": "Microsoft",
+    "product": "Windows SMBv1",
+    "exploit_available": true,
+    "references": ["https://learn.microsoft.com/en-us/security-updates/securitybulletins/2017/ms17-010"]
+  },
+  "CVE-2017-5638": {
+    "description": "The Jakarta Multipart parser in Apache Struts 2 has incorrect exception handling and error-message generation during file-upload attempts, which allows remote attackers to execute arbitrary commands via a crafted Content-Type, Content-Disposition, or Content-Length HTTP header.",
+    "cvss_v3": 10.0,
+    "severity": "critical",
+    "cwe": ["CWE-20", "CWE-77"],
+    "published": "2017-03-10",
+    "vendor": "Apache",
+    "product": "Apache Struts 2",
+    "exploit_available": true,
+    "references": ["https://cwiki.apache.org/confluence/display/WW/S2-045"]
+  },
+  "CVE-2023-22084": {
+    "description": "Difficult to exploit vulnerability in the MySQL Server Optimizer component allows a low-privileged attacker with network access to compromise MySQL Server, resulting in denial of service.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": ["CWE-400"],
+    "published": "2023-10-17",
+    "vendor": "Oracle",
+    "product": "MySQL Server",
+    "exploit_available": false,
+    "references": ["https://www.oracle.com/security-alerts/cpuoct2023.html"]
+  },
+  "CVE-2021-44228": {
+    "description": "Apache Log4j2 JNDI features used in configuration, log messages, and parameters do not protect against attacker-controlled LDAP and other JNDI related endpoints, allowing an attacker to execute arbitrary code (Log4Shell).",
+    "cvss_v3": 10.0,
+    "severity": "critical",
+    "cwe": ["CWE-502", "CWE-917"],
+    "published": "2021-12-10",
+    "vendor": "Apache",
+    "product": "Log4j2",
+    "exploit_available": true,
+    "references": ["https://logging.apache.org/log4j/2.x/security.html"]
+  },
+  "CVE-2021-34527": {
+    "description": "Windows Print Spooler Remote Code Execution Vulnerability, known as PrintNightmare, allows an attacker to run arbitrary code with SYSTEM privileges.",
+    "cvss_v3": 8.8,
+    "severity": "high",
+    "cwe": ["CWE-269"],
+    "published": "2021-07-01",
+    "vendor": "Microsoft",
+    "product": "Windows Print Spooler",
+    "exploit_available": true,
+    "references": ["https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-34527"]
+  },
+  "CVE-2014-0160": {
+    "description": "The TLS/DTLS heartbeat extension in OpenSSL does not properly handle Heartbeat Extension packets, allowing remote attackers to obtain sensitive information from process memory (Heartbleed).",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": ["CWE-125"],
+    "published": "2014-04-07",
+    "vendor": "OpenSSL",
+    "product": "OpenSSL",
+    "exploit_available": true,
+    "references": ["https://heartbleed.com/"]
+  },
+  "CVE-2019-0708": {
+    "description": "A remote code execution vulnerability exists in Remote Desktop Services (BlueKeep) when an unauthenticated attacker connects using RDP and sends specially crafted requests.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": ["CWE-416"],
+    "published": "2019-05-14",
+    "vendor": "Microsoft",
+    "product": "Windows Remote Desktop Services",
+    "exploit_available": true,
+    "references": ["https://msrc.microsoft.com/update-guide/vulnerability/CVE-2019-0708"]
+  }
+}

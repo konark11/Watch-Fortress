@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.94SVN scan initiated Fri Aug  7 07:35:26 2026 as: nmap -sV -&#45;top-ports 20 -oX sample_scans/sample_nmap.xml scanme.nmap.org -->
+<nmaprun scanner="nmap" args="nmap -sV -&#45;top-ports 20 -oX sample_scans/sample_nmap.xml scanme.nmap.org" start="1786088126" startstr="Fri Aug  7 07:35:26 2026" version="7.94SVN" xmloutputversion="1.05">
+<scaninfo type="syn" protocol="tcp" numservices="20" services="21-23,25,53,80,110-111,135,139,143,443,445,993,995,1723,3306,3389,5900,8080"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<hosthint><status state="up" reason="unknown-response" reason_ttl="0"/>
+<address addr="45.33.32.156" addrtype="ipv4"/>
+<hostnames>
+<hostname name="scanme.nmap.org" type="user"/>
+</hostnames>
+</hosthint>
+<host starttime="1786088126" endtime="1786088228"><status state="up" reason="syn-ack" reason_ttl="63"/>
+<address addr="45.33.32.156" addrtype="ipv4"/>
+<hostnames>
+<hostname name="scanme.nmap.org" type="user"/>
+<hostname name="scanme.nmap.org" type="PTR"/>
+</hostnames>
+<ports><port protocol="tcp" portid="21"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ftp" method="table" conf="3"/></port>
+<port protocol="tcp" portid="22"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ssh" method="table" conf="3"/></port>
+<port protocol="tcp" portid="23"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="telnet" method="table" conf="3"/></port>
+<port protocol="tcp" portid="25"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="smtp" method="table" conf="3"/></port>
+<port protocol="tcp" portid="53"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="domain" method="table" conf="3"/></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="63"/><service name="http" servicefp="SF-Port80-TCP:V=7.94SVN%T=SSL%I=7%D=8/7%Time=6A758AE7%P=x86_64-pc-linux-gnu%r(GetRequest,97,&quot;HTTP/1\.1\x20426\x20Upgrade\x20Required\r\ncontent-length:\x2016\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:36:06\x20GMT\r\nconnection:\x20close\r\n\r\nUpgrade\x20Required&quot;)%r(HTTPOptions,97,&quot;HTTP/1\.1\x20426\x20Upgrade\x20Required\r\ncontent-length:\x2016\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:36:07\x20GMT\r\nconnection:\x20close\r\n\r\nUpgrade\x20Required&quot;)%r(RTSPRequest,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:36:08\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(DNSVersionBindReqTCP,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:36:14\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(DNSStatusRequestTCP,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:36:16\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(Help,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:36:17\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(SSLSessionReq,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:36:18\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(TerminalServerCookie,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:36:19\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(TLSSessionReq,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:36:20\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(Kerberos,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:36:21\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;);" tunnel="ssl" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="110"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3" method="table" conf="3"/></port>
+<port protocol="tcp" portid="111"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="rpcbind" method="table" conf="3"/></port>
+<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
+<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
+<port protocol="tcp" portid="143"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imap" method="table" conf="3"/></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="63"/><service name="https" servicefp="SF-Port443-TCP:V=7.94SVN%T=SSL%I=7%D=8/7%Time=6A758ACD%P=x86_64-pc-linux-gnu%r(GetRequest,97,&quot;HTTP/1\.1\x20426\x20Upgrade\x20Required\r\ncontent-length:\x2016\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:35:40\x20GMT\r\nconnection:\x20close\r\n\r\nUpgrade\x20Required&quot;)%r(HTTPOptions,97,&quot;HTTP/1\.1\x20426\x20Upgrade\x20Required\r\ncontent-length:\x2016\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:35:41\x20GMT\r\nconnection:\x20close\r\n\r\nUpgrade\x20Required&quot;)%r(FourOhFourRequest,97,&quot;HTTP/1\.1\x20426\x20Upgrade\x20Required\r\ncontent-length:\x2016\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:35:42\x20GMT\r\nconnection:\x20close\r\n\r\nUpgrade\x20Required&quot;)%r(tor-versions,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:35:43\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(RTSPRequest,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:35:49\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(DNSVersionBindReqTCP,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:35:55\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(DNSStatusRequestTCP,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:35:56\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(Help,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:35:57\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(SSLSessionReq,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:35:58\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;)%r(TerminalServerCookie,8D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\ncontent-length:\x2011\r\ncontent-type:\x20text/plain\r\ndate:\x20Fri,\x2007\x20Aug\x202026\x2007:35:59\x20GMT\r\nconnection:\x20close\r\n\r\nBad\x20Request&quot;);" tunnel="ssl" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="microsoft-ds" method="table" conf="3"/></port>
+<port protocol="tcp" portid="993"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="imaps" method="table" conf="3"/></port>
+<port protocol="tcp" portid="995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pop3s" method="table" conf="3"/></port>
+<port protocol="tcp" portid="1723"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="pptp" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3306"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="mysql" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3389"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ms-wbt-server" method="table" conf="3"/></port>
+<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+</ports>
+<times srtt="247" rttvar="2117" to="100000"/>
+</host>
+<runstats><finished time="1786088228" timestr="Fri Aug  7 07:37:08 2026" summary="Nmap done at Fri Aug  7 07:37:08 2026; 1 IP address (1 host up) scanned in 102.76 seconds" elapsed="102.76" exit="success"/><hosts up="1" down="0" total="1"/>
+</runstats>
+</nmaprun>

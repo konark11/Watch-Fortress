@@ -1,0 +1,22 @@
+{
+  "CWE-20": {"name": "Improper Input Validation", "description": "The product does not validate or incorrectly validates input that can affect the control flow or data flow of a program."},
+  "CWE-77": {"name": "Improper Neutralization of Special Elements used in a Command ('Command Injection')", "description": "The product constructs a command using externally-influenced input, but does not neutralize special elements that could modify the intended command."},
+  "CWE-78": {"name": "OS Command Injection", "description": "The product constructs an OS command using externally-influenced input, allowing attackers to execute unexpected, dangerous commands."},
+  "CWE-79": {"name": "Cross-site Scripting (XSS)", "description": "The product does not neutralize user-controllable input before it is placed in output used as a web page served to other users."},
+  "CWE-89": {"name": "SQL Injection", "description": "The product constructs SQL commands using externally-influenced input, allowing attackers to modify the intended SQL command."},
+  "CWE-119": {"name": "Improper Restriction of Operations within the Bounds of a Memory Buffer", "description": "The product performs operations on a memory buffer, but can read from or write to a memory location outside the intended boundary."},
+  "CWE-125": {"name": "Out-of-bounds Read", "description": "The product reads data past the end, or before the beginning, of the intended buffer."},
+  "CWE-200": {"name": "Exposure of Sensitive Information to an Unauthorized Actor", "description": "The product exposes sensitive information to an actor not explicitly authorized to have access."},
+  "CWE-269": {"name": "Improper Privilege Management", "description": "The product does not properly assign, modify, track, or check privileges for an actor, creating an unintended sphere of control."},
+  "CWE-287": {"name": "Improper Authentication", "description": "When an actor claims an identity, the product does not prove or insufficiently proves the claim is correct."},
+  "CWE-306": {"name": "Missing Authentication for Critical Function", "description": "The product does not perform authentication for functionality that requires a provable user identity."},
+  "CWE-352": {"name": "Cross-Site Request Forgery (CSRF)", "description": "The web application does not, or cannot, sufficiently verify a well-formed, valid, consistent request was intentionally provided by the user who submitted it."},
+  "CWE-400": {"name": "Uncontrolled Resource Consumption", "description": "The product does not properly control the allocation and maintenance of a limited resource, allowing an actor to influence the amount of resources consumed, leading to denial of service."},
+  "CWE-416": {"name": "Use After Free", "description": "Referencing memory after it has been freed can cause a program to crash, use unexpected values, or execute code."},
+  "CWE-502": {"name": "Deserialization of Untrusted Data", "description": "The product deserializes untrusted data without sufficiently verifying that the resulting data will be valid, allowing an attacker to execute arbitrary code."},
+  "CWE-611": {"name": "Improper Restriction of XML External Entity Reference (XXE)", "description": "The product processes an XML document that can contain XML entities with URIs resolving to documents outside the intended sphere of control."},
+  "CWE-798": {"name": "Use of Hard-coded Credentials", "description": "The product contains hard-coded credentials, such as a password or cryptographic key, which it uses for authentication or internal data encryption."},
+  "CWE-862": {"name": "Missing Authorization", "description": "The product does not perform an authorization check when an actor attempts to access a resource or perform an action."},
+  "CWE-917": {"name": "Improper Neutralization of Special Elements used in an Expression Language Statement (Expression Language Injection)", "description": "The product constructs an expression language statement using externally-influenced input, allowing an attacker to inject arbitrary EL statements."},
+  "CWE-284": {"name": "Improper Access Control", "description": "The product does not restrict or incorrectly restricts access to a resource from an unauthorized actor."}
+}

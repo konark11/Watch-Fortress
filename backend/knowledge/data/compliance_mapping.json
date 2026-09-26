@@ -1,0 +1,26 @@
+{
+  "PCI-DSS": {
+    "A03:2021": ["Requirement 6.2.4 - Injection flaws prevention"],
+    "A02:2021": ["Requirement 3.5 - Protect stored cryptographic keys", "Requirement 4.2 - Strong cryptography in transit"],
+    "A05:2021": ["Requirement 2.2 - Secure configuration standards"],
+    "A07:2021": ["Requirement 8.3 - Strong authentication"],
+    "A01:2021": ["Requirement 7.1 - Restrict access by business need to know"],
+    "default": ["Requirement 6.3 - Identify and address vulnerabilities via a documented process", "Requirement 11.3 - Perform periodic penetration testing"]
+  },
+  "ISO27001": {
+    "A03:2021": ["Annex A.14.2.5 - Secure system engineering principles"],
+    "A02:2021": ["Annex A.10.1 - Cryptographic controls"],
+    "A05:2021": ["Annex A.12.6.1 - Management of technical vulnerabilities"],
+    "A07:2021": ["Annex A.9.4 - System and application access control"],
+    "A01:2021": ["Annex A.9.1 - Business requirements of access control"],
+    "default": ["Annex A.12.6.1 - Management of technical vulnerabilities", "Annex A.18.2.3 - Technical compliance review"]
+  },
+  "NIST_CSF": {
+    "A03:2021": ["PR.DS-5 - Protections against data leaks", "DE.CM-4 - Malicious code detection"],
+    "A02:2021": ["PR.DS-1 - Data-at-rest protection", "PR.DS-2 - Data-in-transit protection"],
+    "A05:2021": ["PR.IP-1 - Baseline configuration management"],
+    "A07:2021": ["PR.AC-1 - Identity and credential management"],
+    "A01:2021": ["PR.AC-4 - Access permissions management"],
+    "default": ["ID.RA-1 - Asset vulnerabilities identified and documented", "RS.MI-3 - Newly identified vulnerabilities are mitigated or documented as accepted risk"]
+  }
+}

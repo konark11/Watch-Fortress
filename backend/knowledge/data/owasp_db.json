@@ -1,0 +1,12 @@
+{
+  "A01:2021": {"name": "Broken Access Control", "related_cwe": ["CWE-284", "CWE-862", "CWE-269"]},
+  "A02:2021": {"name": "Cryptographic Failures", "related_cwe": ["CWE-798", "CWE-125"]},
+  "A03:2021": {"name": "Injection", "related_cwe": ["CWE-77", "CWE-78", "CWE-79", "CWE-89"]},
+  "A04:2021": {"name": "Insecure Design", "related_cwe": ["CWE-20"]},
+  "A05:2021": {"name": "Security Misconfiguration", "related_cwe": ["CWE-611", "CWE-200"]},
+  "A06:2021": {"name": "Vulnerable and Outdated Components", "related_cwe": ["CWE-1104"]},
+  "A07:2021": {"name": "Identification and Authentication Failures", "related_cwe": ["CWE-287", "CWE-306"]},
+  "A08:2021": {"name": "Software and Data Integrity Failures", "related_cwe": ["CWE-502", "CWE-917"]},
+  "A09:2021": {"name": "Security Logging and Monitoring Failures", "related_cwe": ["CWE-778"]},
+  "A10:2021": {"name": "Server-Side Request Forgery (SSRF)", "related_cwe": ["CWE-918"]}
+}

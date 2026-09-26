@@ -1,0 +1,77 @@
+services:
+  vuln-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vuln-platform:latest
+    container_name: vuln-platform
+    ports:
+      - "8000:8000"
+    volumes:
+      - vuln-data:/app/backend/data
+      - nuclei-templates:/root/nuclei-templates
+    environment:
+      # Swap SQLite (portable/default) for PostgreSQL by uncommenting and
+      # pointing this at a real Postgres service - no code changes needed,
+      # every query in this platform goes through SQLAlchemy.
+      # - VULN_DATABASE_URL=postgresql://vuln:vuln@postgres:5432/vuln_platform
+
+      - VULN_JWT_SECRET=${VULN_JWT_SECRET:-change-me-in-production}
+
+      # RAG assistant mode: template (default, offline) | ollama | online
+      - VULN_RAG_MODE=${VULN_RAG_MODE:-template}
+      - VULN_OLLAMA_BASE_URL=${VULN_OLLAMA_BASE_URL:-http://ollama:11434}
+      - VULN_OLLAMA_MODEL=${VULN_OLLAMA_MODEL:-llama3}
+
+      # OpenVAS/GVM - point at a real gvmd instance to enable that scanner
+      - GVM_HOST=${GVM_HOST:-}
+      - GVM_PORT=${GVM_PORT:-9390}
+      - GVM_USERNAME=${GVM_USERNAME:-}
+      - GVM_PASSWORD=${GVM_PASSWORD:-}
+
+      # Nessus - point at a real Nessus instance to enable that scanner
+      - NESSUS_URL=${NESSUS_URL:-}
+      - NESSUS_ACCESS_KEY=${NESSUS_ACCESS_KEY:-}
+      - NESSUS_SECRET_KEY=${NESSUS_SECRET_KEY:-}
+    restart: unless-stopped
+    # Nmap's SYN scan / OS detection needs raw sockets. Without this the
+    # scanner falls back to slower TCP-connect scans - fine, but slower.
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+
+  # Optional: a local Ollama service for air-gapped LLM-powered RAG
+  # generation. Not started by default - run with `--profile llm` and pull
+  # a model once (`docker compose exec ollama ollama pull llama3`).
+  ollama:
+    image: ollama/ollama:latest
+    container_name: vuln-platform-ollama
+    profiles: ["llm"]
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+
+  # Optional: PostgreSQL for multi-analyst production deployments in place
+  # of the default portable SQLite file. Not started by default - run with
+  # `--profile postgres`, then set VULN_DATABASE_URL above to
+  # postgresql://vuln:vuln@postgres:5432/vuln_platform and restart
+  # vuln-platform. No application code changes needed either way.
+  postgres:
+    image: postgres:16-alpine
+    container_name: vuln-platform-postgres
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_USER: vuln
+      POSTGRES_PASSWORD: vuln
+      POSTGRES_DB: vuln_platform
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  vuln-data:
+  nuclei-templates:
+  ollama-data:
+  postgres-data:

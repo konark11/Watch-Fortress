@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>{{ report_title }}</title>
+<style>
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #1a1f29; margin: 40px; line-height: 1.5; }
+  h1 { font-size: 24px; border-bottom: 3px solid #1a4d8f; padding-bottom: 10px; }
+  h2 { font-size: 18px; color: #1a4d8f; margin-top: 32px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 24px; }
+  .kpi-row { display: flex; gap: 16px; margin: 20px 0; }
+  .kpi { background: #f4f6fa; border-radius: 8px; padding: 14px 18px; flex: 1; text-align: center; }
+  .kpi .val { font-size: 26px; font-weight: 700; color: #1a4d8f; }
+  .kpi .label { font-size: 11px; color: #666; text-transform: uppercase; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 12.5px; }
+  th, td { border: 1px solid #e0e4eb; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #1a4d8f; color: white; font-size: 11px; text-transform: uppercase; }
+  tr:nth-child(even) { background: #f9fafc; }
+  .badge { padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; color: white; }
+  .critical { background: #d92d3f; } .high { background: #e8792f; }
+  .medium { background: #e0b127; color:#333 } .low { background: #4f9ecf; } .info { background: #999; }
+  .tag { display: inline-block; background: #eef2f9; border-radius: 4px; padding: 1px 6px; margin: 1px; font-size: 10.5px; }
+  .footer { margin-top: 40px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+</style>
+</head>
+<body>
+<h1>{{ report_title }}</h1>
+<div class="meta">Generated {{ data.generated_at }} · Scope: {{ data.scope }}{% if data.compliance_framework %} · Framework: {{ data.compliance_framework }}{% endif %}</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="val">{{ data.summary.total_assets }}</div><div class="label">Assets</div></div>
+  <div class="kpi"><div class="val">{{ data.summary.total_vulnerabilities }}</div><div class="label">Vulnerabilities</div></div>
+  <div class="kpi"><div class="val">{{ data.summary.severity_counts.critical }}</div><div class="label">Critical</div></div>
+  <div class="kpi"><div class="val">{{ data.summary.kev_count }}</div><div class="label">Known Exploited</div></div>
+  <div class="kpi"><div class="val">{{ data.summary.exploitable_count }}</div><div class="label">Exploit Available</div></div>
+</div>
+
+{% if report_type == 'executive' %}
+<h2>Executive Summary</h2>
+<p>This assessment identified <strong>{{ data.summary.total_vulnerabilities }}</strong> vulnerabilities across
+<strong>{{ data.summary.total_assets }}</strong> assets, including <strong>{{ data.summary.severity_counts.critical }} critical</strong>
+and <strong>{{ data.summary.severity_counts.high }} high</strong> severity findings.
+{% if data.summary.kev_count > 0 %}<strong>{{ data.summary.kev_count }}</strong> of these are listed in the CISA Known Exploited Vulnerabilities catalog and represent active, real-world attacker interest — remediation should be prioritized accordingly.{% endif %}</p>
+
+<h2>Top Risk Findings</h2>
+<table>
+<tr><th>Finding</th><th>Severity</th><th>Asset</th><th>Risk Score</th></tr>
+{% for f in data.top_risk_findings %}
+<tr><td>{{ f.title }}</td><td><span class="badge {{ f.severity }}">{{ f.severity|upper }}</span></td><td>{{ f.asset_ip }}</td><td>{{ f.risk_score }}</td></tr>
+{% endfor %}
+</table>
+
+<h2>Most At-Risk Assets</h2>
+<table>
+<tr><th>IP Address</th><th>Hostname</th><th>Criticality</th><th>Max Risk Score</th></tr>
+{% for a in data.critical_assets %}
+<tr><td>{{ a.ip }}</td><td>{{ a.hostname or '—' }}</td><td>{{ a.criticality }}</td><td>{{ a.max_risk_score }}</td></tr>
+{% endfor %}
+</table>
+{% endif %}
+
+{% if report_type == 'technical' %}
+<h2>Detailed Findings ({{ data.findings|length }})</h2>
+{% for f in data.findings %}
+<div style="border:1px solid #e0e4eb; border-radius:6px; padding:14px; margin-bottom:14px;">
+  <div style="display:flex; justify-content:space-between;">
+    <strong>{{ f.title }}</strong>
+    <span class="badge {{ f.severity }}">{{ f.severity|upper }}</span>
+  </div>
+  <div style="color:#666; font-size:12px; margin:6px 0;">{{ f.asset_ip }}{% if f.asset_hostname %} ({{ f.asset_hostname }}){% endif %}{% if f.port %}:{{ f.port }}{% endif %} · CVSS {{ f.cvss_score or 'n/a' }} · Risk {{ f.risk_score }} ({{ f.risk_band }})</div>
+  <p>{{ f.description or 'No description available.' }}</p>
+  <div>
+    {% for c in f.cve_ids %}<span class="tag">{{ c }}</span>{% endfor %}
+    {% for c in f.cwe_ids %}<span class="tag">{{ c }}</span>{% endfor %}
+    {% for c in f.attack_techniques %}<span class="tag">{{ c }}</span>{% endfor %}
+    {% for c in f.owasp_categories %}<span class="tag">{{ c }}</span>{% endfor %}
+    {% if f.kev_listed %}<span class="tag" style="background:#fbdadf;color:#a1112a;">CISA KEV</span>{% endif %}
+    {% if f.exploit_available %}<span class="tag" style="background:#fde6d0;color:#a15a11;">Exploit Available</span>{% endif %}
+  </div>
+  <div style="margin-top:8px;"><strong>Remediation:</strong> {{ f.remediation }}</div>
+  <div style="font-size:11px; color:#999; margin-top:4px;">Detected by: {{ f.source_scanners|join(', ') }}</div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if report_type == 'compliance' %}
+<h2>Compliance Mapping — {{ data.compliance_framework }}</h2>
+<table>
+<tr><th>Finding</th><th>Severity</th><th>Asset</th><th>Mapped Controls</th></tr>
+{% for row in data.compliance_rows %}
+<tr>
+  <td>{{ row.finding }}</td>
+  <td><span class="badge {{ row.severity }}">{{ row.severity|upper }}</span></td>
+  <td>{{ row.asset_ip }}</td>
+  <td>{% for c in row.controls %}{{ c }}<br>{% endfor %}</td>
+</tr>
+{% endfor %}
+</table>
+{% endif %}
+
+<div class="footer">Watch Fortress · Report generated {{ data.generated_at }}</div>
+</body>
+</html>

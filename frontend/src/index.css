@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/*
+  Design direction: dark, near-black "ops console" look (in the spirit of
+  modern SaaS dashboards like Linear/Vercel), with a punchy lime-green
+  accent reserved for primary actions, brand elements, and the "good/
+  positive" signal - distinct from the severity scale, which stays on
+  its own red/orange/amber/blue track so a critical finding never gets
+  confused with a brand-colored UI element.
+*/
+:root {
+  --bg: #0b0c0f;
+  --surface: #141519;
+  --surface-2: #1a1c21;
+  --surface-3: #212329;
+  --border: #26282f;
+  --border-soft: #1d1f25;
+  --text: #f2f3f5;
+  --text-muted: #9a9ca6;
+  --text-dim: #66676f;
+
+  --brand: #c8ff4d;
+  --brand-dim: rgba(200, 255, 77, 0.12);
+
+  --critical: #fb3f5e;
+  --critical-dim: rgba(251, 63, 94, 0.14);
+  --high: #fb923c;
+  --high-dim: rgba(251, 146, 60, 0.14);
+  --medium: #fbbf24;
+  --medium-dim: rgba(251, 191, 36, 0.14);
+  --low: #38bdf8;
+  --low-dim: rgba(56, 189, 248, 0.14);
+  --info: #71727a;
+  --info-dim: rgba(113, 114, 122, 0.14);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 1px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+
+  --sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+
+  color-scheme: dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 70% 45% at 15% -10%, rgba(200, 255, 77, 0.06), transparent),
+    radial-gradient(ellipse 55% 35% at 100% 0%, rgba(251, 63, 94, 0.04), transparent),
+    radial-gradient(ellipse 50% 40% at 90% 100%, rgba(56, 189, 248, 0.04), transparent);
+  background-attachment: fixed;
+}
+
+::selection { background: var(--brand-dim); color: var(--text); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--surface-3); }
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.sev-critical { color: var(--critical); background: var(--critical-dim); }
+.sev-high { color: var(--high); background: var(--high-dim); }
+.sev-medium { color: var(--medium); background: var(--medium-dim); }
+.sev-low { color: var(--low); background: var(--low-dim); }
+.sev-info { color: var(--info); background: var(--info-dim); }
+
+.font-mono-data { font-family: var(--mono); }

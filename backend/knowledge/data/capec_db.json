@@ -1,0 +1,14 @@
+{
+  "CAPEC-88": {"name": "OS Command Injection", "description": "An attacker manipulates the syntax of an OS command by injecting malicious input, causing the underlying operating system to execute unintended commands.", "related_cwe": ["CWE-77", "CWE-78"]},
+  "CAPEC-66": {"name": "SQL Injection", "description": "An attacker injects SQL syntax into an application's input in order to alter query logic and access or modify data outside intended scope.", "related_cwe": ["CWE-89"]},
+  "CAPEC-63": {"name": "Cross-Site Scripting (XSS)", "description": "An attacker injects malicious script into web content that will be executed in the context of another user's browser session.", "related_cwe": ["CWE-79"]},
+  "CAPEC-62": {"name": "Cross Site Request Forgery", "description": "An attacker causes a victim's browser to send a forged, authenticated request to a target application without the victim's knowledge.", "related_cwe": ["CWE-352"]},
+  "CAPEC-100": {"name": "Overflow Buffers", "description": "An attacker sends more data than a buffer can handle, corrupting adjacent memory and potentially achieving code execution.", "related_cwe": ["CWE-119", "CWE-125"]},
+  "CAPEC-115": {"name": "Authentication Bypass", "description": "An attacker circumvents authentication mechanisms to gain unauthorized access to a system or resource.", "related_cwe": ["CWE-287", "CWE-306"]},
+  "CAPEC-233": {"name": "Privilege Escalation", "description": "An attacker exploits a weakness to gain elevated privileges beyond what was originally granted.", "related_cwe": ["CWE-269", "CWE-284"]},
+  "CAPEC-586": {"name": "Object Injection", "description": "An attacker manipulates serialized data to inject malicious objects that execute when deserialized by the application.", "related_cwe": ["CWE-502"]},
+  "CAPEC-221": {"name": "Data Serialization External Entities Blowup / XXE", "description": "An attacker crafts malicious XML input containing external entity references to disclose local files or perform SSRF.", "related_cwe": ["CWE-611"]},
+  "CAPEC-560": {"name": "Use of Known Domain Credentials", "description": "An attacker leverages hard-coded, default, or previously compromised credentials to authenticate as a legitimate user.", "related_cwe": ["CWE-798"]},
+  "CAPEC-125": {"name": "Flooding", "description": "An attacker sends excessive requests or data to exhaust the target's resources, resulting in denial of service.", "related_cwe": ["CWE-400"]},
+  "CAPEC-118": {"name": "Information Gathering via Exposed Data", "description": "An attacker collects sensitive information that has been unintentionally exposed by the target system.", "related_cwe": ["CWE-200"]}
+}

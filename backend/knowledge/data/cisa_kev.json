@@ -1,0 +1,8 @@
+{
+  "CVE-2024-3400": {"date_added": "2024-04-12", "due_date": "2024-04-19", "vendor_project": "Palo Alto Networks", "notes": "Actively exploited GlobalProtect command injection."},
+  "CVE-2017-0144": {"date_added": "2021-11-03", "due_date": "2021-11-17", "vendor_project": "Microsoft", "notes": "EternalBlue - exploited in WannaCry/NotPetya."},
+  "CVE-2017-5638": {"date_added": "2021-11-03", "due_date": "2021-11-17", "vendor_project": "Apache", "notes": "Struts 2 RCE - exploited in the 2017 Equifax breach."},
+  "CVE-2021-44228": {"date_added": "2021-12-10", "due_date": "2021-12-24", "vendor_project": "Apache", "notes": "Log4Shell - mass-exploited within days of disclosure."},
+  "CVE-2021-34527": {"date_added": "2021-07-08", "due_date": "2021-07-22", "vendor_project": "Microsoft", "notes": "PrintNightmare - actively exploited for SYSTEM-level RCE."},
+  "CVE-2019-0708": {"date_added": "2021-11-03", "due_date": "2021-11-17", "vendor_project": "Microsoft", "notes": "BlueKeep - wormable RDP RCE."}
+}

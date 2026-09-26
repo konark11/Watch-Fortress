@@ -1,0 +1,20 @@
+{
+  "T1190": {"name": "Exploit Public-Facing Application", "tactic": "Initial Access"},
+  "T1059": {"name": "Command and Scripting Interpreter", "tactic": "Execution"},
+  "T1059.004": {"name": "Command and Scripting Interpreter: Unix Shell", "tactic": "Execution"},
+  "T1210": {"name": "Exploitation of Remote Services", "tactic": "Lateral Movement"},
+  "T1068": {"name": "Exploitation for Privilege Escalation", "tactic": "Privilege Escalation"},
+  "T1211": {"name": "Exploitation for Defense Evasion", "tactic": "Defense Evasion"},
+  "T1212": {"name": "Exploitation for Credential Access", "tactic": "Credential Access"},
+  "T1040": {"name": "Network Sniffing", "tactic": "Credential Access"},
+  "T1552": {"name": "Unsecured Credentials", "tactic": "Credential Access"},
+  "T1552.001": {"name": "Unsecured Credentials: Credentials In Files", "tactic": "Credential Access"},
+  "T1499": {"name": "Endpoint Denial of Service", "tactic": "Impact"},
+  "T1499.002": {"name": "Endpoint Denial of Service: Service Exhaustion Flood", "tactic": "Impact"},
+  "T1005": {"name": "Data from Local System", "tactic": "Collection"},
+  "T1020": {"name": "Automated Exfiltration", "tactic": "Exfiltration"},
+  "T1021": {"name": "Remote Services", "tactic": "Lateral Movement"},
+  "T1078": {"name": "Valid Accounts", "tactic": "Initial Access"},
+  "T1595": {"name": "Active Scanning", "tactic": "Reconnaissance"},
+  "T1595.002": {"name": "Active Scanning: Vulnerability Scanning", "tactic": "Reconnaissance"}
+}

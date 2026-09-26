@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<report>
+<results>
+<result>
+<host>10.0.0.5</host>
+<port>443/tcp</port>
+<nvt oid="1.3.6.1.4.1.25623.1.0.149334">
+<name>Ivanti Connect Secure Command Injection (CVE-2024-3400)</name>
+<cve>CVE-2024-3400</cve>
+<cvss_base>10.0</cvss_base>
+<solution>Apply vendor patch immediately.</solution>
+</nvt>
+<threat>Critical</threat>
+<description>Command injection vulnerability allows unauthenticated remote code execution.</description>
+</result>
+<result>
+<host>10.0.0.12</host>
+<port>80/tcp</port>
+<nvt oid="1.3.6.1.4.1.25623.1.0.108441">
+<name>Apache Struts Remote Code Execution (CVE-2017-5638)</name>
+<cve>CVE-2017-5638</cve>
+<cvss_base>10.0</cvss_base>
+<solution>Upgrade Apache Struts to a patched version.</solution>
+</nvt>
+<threat>Critical</threat>
+<description>The Jakarta Multipart parser in Apache Struts is vulnerable to remote code execution.</description>
+</result>
+<result>
+<host>10.0.0.12</host>
+<port>22/tcp</port>
+<nvt oid="1.3.6.1.4.1.25623.1.0.103599">
+<name>SSH Weak Key Exchange Algorithms</name>
+<cve>NOCVE</cve>
+<cvss_base>4.3</cvss_base>
+<solution>Disable weak KEX algorithms.</solution>
+</nvt>
+<threat>Medium</threat>
+<description>Weak key exchange algorithms are enabled.</description>
+</result>
+</results>
+</report>
