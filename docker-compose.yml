@@ -18,10 +18,16 @@ services:
 
       - VULN_JWT_SECRET=${VULN_JWT_SECRET:-change-me-in-production}
 
-      # RAG assistant mode: template (default, offline) | ollama | online
+      # RAG assistant mode: template (default, offline) | ollama | openrouter | online
       - VULN_RAG_MODE=${VULN_RAG_MODE:-template}
+      - VULN_NVD_URL=${VULN_NVD_URL:-https://services.nvd.nist.gov/rest/json/cves/2.0}
       - VULN_OLLAMA_BASE_URL=${VULN_OLLAMA_BASE_URL:-http://ollama:11434}
       - VULN_OLLAMA_MODEL=${VULN_OLLAMA_MODEL:-llama3}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_BASE_URL=${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-}
+      - OPENROUTER_EMBEDDING_MODEL=${OPENROUTER_EMBEDDING_MODEL:-}
+      - OPENROUTER_RERANK_MODEL=${OPENROUTER_RERANK_MODEL:-}
 
       # OpenVAS/GVM - point at a real gvmd instance to enable that scanner
       - GVM_HOST=${GVM_HOST:-}

@@ -280,8 +280,21 @@ class KnowledgeDoc(Base):
     created_by = Column(String(80), nullable=True)
     created_at = Column(DateTime, default=now_utc)
     updated_at = Column(DateTime, default=now_utc)
+    chunks = relationship("KnowledgeChunk", back_populates="document", cascade="all, delete-orphan")
 
 
+class KnowledgeChunk(Base):
+    """Persisted ingestion output for a knowledge document."""
+    __tablename__ = "knowledge_chunks"
+    id = Column(Integer, primary_key=True)
+    document_id = Column(Integer, ForeignKey("knowledge_docs.id", ondelete="CASCADE"), nullable=False, index=True)
+    chunk_index = Column(Integer, nullable=False)
+    content = Column(Text, nullable=False)
+    embedding = Column(JSON, nullable=False)
+    metadata_json = Column("metadata", JSON, default=dict, nullable=False)
+    created_at = Column(DateTime, default=now_utc)
+
+    document = relationship("KnowledgeDoc", back_populates="chunks")
 # ---------------------------------------------------------------------------
 # Reports
 # ---------------------------------------------------------------------------

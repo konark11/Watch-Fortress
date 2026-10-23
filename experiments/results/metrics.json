@@ -1,0 +1,162 @@
+{
+  "provenance": "SYNTHETIC_OR_MIXED",
+  "test_pairs": 11,
+  "label_distribution": {
+    "RELATED": 4,
+    "DIFFERENT": 6,
+    "SAME": 1
+  },
+  "warnings": [
+    "class RELATED has fewer than 5 test examples",
+    "class SAME has fewer than 5 test examples"
+  ],
+  "methods": {
+    "M1 Rule-based": {
+      "status": "RUN",
+      "metrics": {
+        "precision_same": 1.0,
+        "recall_same": 1.0,
+        "f1_same": 1.0,
+        "macro_f1": 0.8666666666666667,
+        "confusion_matrix": {
+          "SAME": {
+            "SAME": 1,
+            "RELATED": 0,
+            "DIFFERENT": 0
+          },
+          "RELATED": {
+            "SAME": 0,
+            "RELATED": 4,
+            "DIFFERENT": 0
+          },
+          "DIFFERENT": {
+            "SAME": 0,
+            "RELATED": 2,
+            "DIFFERENT": 4
+          }
+        }
+      },
+      "confidence_intervals_95": {
+        "precision_same": [
+          0.0,
+          1.0
+        ],
+        "recall_same": [
+          0.0,
+          1.0
+        ],
+        "f1_same": [
+          0.0,
+          1.0
+        ],
+        "macro_f1": [
+          0.4047619047619048,
+          1.0
+        ]
+      },
+      "mean_latency_ms": 0.07256364915519953,
+      "total_tokens": null,
+      "total_cost": null,
+      "errors": [
+        {
+          "pair_id": "PAIR-0008",
+          "expected": "DIFFERENT",
+          "predicted": "RELATED",
+          "finding_a": "Nmap detected an HTTP-like service on an alternate port.",
+          "finding_b": "Administrative endpoint is reachable on the web service."
+        },
+        {
+          "pair_id": "PAIR-0054",
+          "expected": "DIFFERENT",
+          "predicted": "RELATED",
+          "finding_a": "Nmap detected an SMB service on port 445.",
+          "finding_b": "SMB signing configuration finding."
+        }
+      ]
+    },
+    "M2 Gradient-boosted classifier": {
+      "status": "RUN",
+      "metrics": {
+        "precision_same": 1.0,
+        "recall_same": 1.0,
+        "f1_same": 1.0,
+        "macro_f1": 0.7802197802197802,
+        "confusion_matrix": {
+          "SAME": {
+            "SAME": 1,
+            "RELATED": 0,
+            "DIFFERENT": 0
+          },
+          "RELATED": {
+            "SAME": 0,
+            "RELATED": 2,
+            "DIFFERENT": 2
+          },
+          "DIFFERENT": {
+            "SAME": 0,
+            "RELATED": 1,
+            "DIFFERENT": 5
+          }
+        }
+      },
+      "confidence_intervals_95": {
+        "precision_same": [
+          0.0,
+          1.0
+        ],
+        "recall_same": [
+          0.0,
+          1.0
+        ],
+        "f1_same": [
+          0.0,
+          1.0
+        ],
+        "macro_f1": [
+          0.25925925925925924,
+          0.9326599326599326
+        ]
+      },
+      "mean_latency_ms": 4.478827267038551,
+      "total_tokens": null,
+      "total_cost": null,
+      "errors": [
+        {
+          "pair_id": "PAIR-0024",
+          "expected": "RELATED",
+          "predicted": "DIFFERENT",
+          "finding_a": "Nmap detected SSH on the target.",
+          "finding_b": "Fictional independent record for the same synthetic configuration issue; not real scan output."
+        },
+        {
+          "pair_id": "PAIR-0028",
+          "expected": "RELATED",
+          "predicted": "DIFFERENT",
+          "finding_a": "Nmap detected an HTTPS service on the target port.",
+          "finding_b": "Certificate validity period is nearing its end."
+        },
+        {
+          "pair_id": "PAIR-0054",
+          "expected": "DIFFERENT",
+          "predicted": "RELATED",
+          "finding_a": "Nmap detected an SMB service on port 445.",
+          "finding_b": "SMB signing configuration finding."
+        }
+      ]
+    },
+    "M3 General LLM": {
+      "status": "NOT RUN",
+      "reason": "M3 General LLM API request failed: HTTP 429: {\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"poolside/laguna-s-2.1:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations\",\"provider_name\":\"Poolside\",\"is_byok\":false,\"limit_source\":\"upstream_provider_shared_pool\",\"remedy_hint\":\"Retry shortly, add your own provider key (https://openrouter.ai/settings/integrations), or route to another provider with provider rout"
+    },
+    "M4 TypeSafe Jev": {
+      "status": "NOT RUN",
+      "reason": "endpoint or model is not configured"
+    }
+  },
+  "comparisons_vs_m1": {
+    "M2 Gradient-boosted classifier": {
+      "test": "exact McNemar test on paired correctness",
+      "p_value": 1.0
+    }
+  }
+}

@@ -1,0 +1,13 @@
+findings_path: experiments/data/real_findings.csv
+pairs_path: experiments/data/real_labeled_pairs.csv
+random_seed: 20261023
+bootstrap_resamples: 1000
+cost_per_token: null
+llm:
+  endpoint: ""
+  model: ""
+  api_key_env: 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
+jev:
+  endpoint: ""
+  model: ""
+  api_key_env: apikey_22318455d2ebe164302aadc576f77da22ea_5d33006b4fa4714a75379639366b8d9b232ec1a8976009cb4f052d7d1cbd9135

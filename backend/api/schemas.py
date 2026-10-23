@@ -82,8 +82,14 @@ class VulnStatusUpdate(BaseModel):
     assigned_to: str | None = None
 
 
+class ConversationTurn(BaseModel):
+    role: str = Field(pattern="^(user|assistant)$")
+    content: str = Field(min_length=1, max_length=4000)
+
+
 class AskRequest(BaseModel):
-    question: str
+    question: str = Field(min_length=1, max_length=2000)
+    history: list[ConversationTurn] = Field(default_factory=list, max_length=12)
 
 
 class KnowledgeDocCreate(BaseModel):

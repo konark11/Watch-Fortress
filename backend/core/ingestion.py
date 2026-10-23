@@ -6,6 +6,7 @@ from models.database import Asset, Port, SSLCertificate, Scan, Finding, ScannerT
 from parsers.registry import parse_scan_output
 from parsers.common import ParseResult
 from correlation.engine import correlate_new_findings
+from experiments.dataset import sync_database_dataset
 
 # Common ports that indicate an asset is likely internet-facing. This is a
 # heuristic (a real deployment would cross-reference actual network
@@ -55,6 +56,7 @@ def ingest_scan_result(db: Session, scan: Scan, raw_text: str, filename: str = "
 
     scan.findings_count = len(new_finding_ids)
     db.commit()
+    sync_database_dataset(db)
 
     return {
         "hosts_discovered": len(parsed.hosts),

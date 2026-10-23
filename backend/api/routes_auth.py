@@ -15,8 +15,25 @@ router = APIRouter()
 def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
+        log_action(
+            db,
+            user,
+            "auth.login_failed",
+            target=f"user:{form_data.username}",
+            details="invalid_credentials",
+            ip_address=request.client.host if request.client else "",
+            username=form_data.username,
+        )
         raise HTTPException(401, "Incorrect username or password")
     if not user.is_active:
+        log_action(
+            db,
+            user,
+            "auth.login_failed",
+            target=f"user:{user.username}",
+            details="inactive_account",
+            ip_address=request.client.host if request.client else "",
+        )
         raise HTTPException(403, "This account has been deactivated")
 
     from datetime import datetime, timezone

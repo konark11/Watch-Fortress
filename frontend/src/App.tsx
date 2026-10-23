@@ -12,6 +12,7 @@ import ReportsPage from "./pages/ReportsPage";
 import KnowledgePage from "./pages/KnowledgePage";
 import SchedulesPage from "./pages/SchedulesPage";
 import AdminPage from "./pages/AdminPage";
+import ExperimentsPage from "../../experiments/ui/ExperimentsPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="assistant" element={<AssistantPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="knowledge" element={<KnowledgePage />} />
+            <Route path="research" element={<ExperimentsPage />} />
             <Route path="schedules" element={<SchedulesPage />} />
             <Route path="admin" element={<AdminPage />} />
           </Route>

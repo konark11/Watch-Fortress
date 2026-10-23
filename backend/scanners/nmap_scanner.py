@@ -4,7 +4,8 @@ system `nmap` binary and captures `-oX` XML output, which then flows
 through parsers/nmap_parser.py exactly like an uploaded/imported file would.
 
 Options supported (passed from the "Launch Scan" dashboard form):
-  profile: "quick" | "full" | "service_version" | "os_detection" | "vuln_scripts"
+  profile: "quick" | "full" | "all_ports" | "all_ports_service_version" |
+           "service_version" | "os_detection" | "vuln_scripts"
 """
 from __future__ import annotations
 import shutil
@@ -17,6 +18,8 @@ from scanners.base import ScannerBackend
 PROFILE_FLAGS = {
     "quick": ["-T4", "-F"],
     "full": ["-T4", "-p-"],
+    "all_ports": ["-T4", "-p-"],
+    "all_ports_service_version": ["-T4", "-p-", "-sV"],
     "service_version": ["-T4", "-sV", "--top-ports", "100"],
     "os_detection": ["-T4", "-O", "--top-ports", "50"],
     "vuln_scripts": ["-T4", "-sV", "--script", "vulners,ssl-cert", "--top-ports", "100"],
@@ -43,10 +46,9 @@ class NmapScanner(ScannerBackend):
             out_path = tmp.name
 
         cmd = ["nmap", *flags, "-oX", out_path, target]
-        try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=options.get("timeout_seconds", 600))
-        except subprocess.TimeoutExpired:
-            raise RuntimeError(f"nmap scan against {target} timed out")
+        # Nmap scans, especially all 65,535 ports, may legitimately run for
+        # longer than a fixed application-level timeout.
+        proc = subprocess.run(cmd, capture_output=True, text=True)
 
         if on_progress:
             on_progress(90, "nmap scan finished, parsing results")
