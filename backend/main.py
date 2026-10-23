@@ -13,6 +13,31 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+
+def _load_local_env() -> None:
+    """Load the repository .env for non-Docker development.
+
+    Production deployments should continue to provide environment variables
+    through the process manager or container runtime.
+    """
+    env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
+    if not os.path.isfile(env_path):
+        return
+    with open(env_path, encoding="utf-8") as env_file:
+        for raw_line in env_file:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip("\"'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
+_load_local_env()
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -45,8 +70,9 @@ load_all_schedules()
 from api import (  # noqa: E402
     routes_auth, routes_users, routes_assets, routes_scans, routes_vulnerabilities,
     routes_dashboard, routes_rag, routes_reports, routes_knowledge, routes_schedules,
-    routes_audit, routes_ws, routes_threat_intel, routes_exploitdb,
+    routes_audit, routes_ws, routes_threat_intel, routes_exploitdb, routes_research,
 )
+from experiments.api import router as experiment_router  # noqa: E402
 
 app.include_router(routes_auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(routes_users.router, prefix="/api/users", tags=["users"])
@@ -61,6 +87,8 @@ app.include_router(routes_schedules.router, prefix="/api/schedules", tags=["sche
 app.include_router(routes_audit.router, prefix="/api/audit", tags=["audit"])
 app.include_router(routes_threat_intel.router, prefix="/api/threat-intel", tags=["threat-intel"])
 app.include_router(routes_exploitdb.router, prefix="/api/exploit-db", tags=["exploit-db"])
+app.include_router(routes_research.router, prefix="/api/research", tags=["research"])
+app.include_router(experiment_router, prefix="/api/research-lab", tags=["research-lab"])
 app.include_router(routes_ws.router, tags=["websocket"])
 
 

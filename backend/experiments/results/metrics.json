@@ -1,0 +1,162 @@
+{
+  "provenance": "SYNTHETIC_OR_MIXED",
+  "test_pairs": 11,
+  "label_distribution": {
+    "RELATED": 4,
+    "DIFFERENT": 6,
+    "SAME": 1
+  },
+  "warnings": [
+    "class RELATED has fewer than 5 test examples",
+    "class SAME has fewer than 5 test examples"
+  ],
+  "methods": {
+    "M1 Rule-based": {
+      "status": "RUN",
+      "metrics": {
+        "precision_same": 1.0,
+        "recall_same": 1.0,
+        "f1_same": 1.0,
+        "macro_f1": 0.8666666666666667,
+        "confusion_matrix": {
+          "SAME": {
+            "SAME": 1,
+            "RELATED": 0,
+            "DIFFERENT": 0
+          },
+          "RELATED": {
+            "SAME": 0,
+            "RELATED": 4,
+            "DIFFERENT": 0
+          },
+          "DIFFERENT": {
+            "SAME": 0,
+            "RELATED": 2,
+            "DIFFERENT": 4
+          }
+        }
+      },
+      "confidence_intervals_95": {
+        "precision_same": [
+          0.0,
+          1.0
+        ],
+        "recall_same": [
+          0.0,
+          1.0
+        ],
+        "f1_same": [
+          0.0,
+          1.0
+        ],
+        "macro_f1": [
+          0.4047619047619048,
+          1.0
+        ]
+      },
+      "mean_latency_ms": 0.09180909149687398,
+      "total_tokens": null,
+      "total_cost": null,
+      "errors": [
+        {
+          "pair_id": "PAIR-0008",
+          "expected": "DIFFERENT",
+          "predicted": "RELATED",
+          "finding_a": "Nmap detected an HTTP-like service on an alternate port.",
+          "finding_b": "Administrative endpoint is reachable on the web service."
+        },
+        {
+          "pair_id": "PAIR-0054",
+          "expected": "DIFFERENT",
+          "predicted": "RELATED",
+          "finding_a": "Nmap detected an SMB service on port 445.",
+          "finding_b": "SMB signing configuration finding."
+        }
+      ]
+    },
+    "M2 Gradient-boosted classifier": {
+      "status": "RUN",
+      "metrics": {
+        "precision_same": 1.0,
+        "recall_same": 1.0,
+        "f1_same": 1.0,
+        "macro_f1": 0.7802197802197802,
+        "confusion_matrix": {
+          "SAME": {
+            "SAME": 1,
+            "RELATED": 0,
+            "DIFFERENT": 0
+          },
+          "RELATED": {
+            "SAME": 0,
+            "RELATED": 2,
+            "DIFFERENT": 2
+          },
+          "DIFFERENT": {
+            "SAME": 0,
+            "RELATED": 1,
+            "DIFFERENT": 5
+          }
+        }
+      },
+      "confidence_intervals_95": {
+        "precision_same": [
+          0.0,
+          1.0
+        ],
+        "recall_same": [
+          0.0,
+          1.0
+        ],
+        "f1_same": [
+          0.0,
+          1.0
+        ],
+        "macro_f1": [
+          0.25925925925925924,
+          0.9326599326599326
+        ]
+      },
+      "mean_latency_ms": 1.6511909198015928,
+      "total_tokens": null,
+      "total_cost": null,
+      "errors": [
+        {
+          "pair_id": "PAIR-0024",
+          "expected": "RELATED",
+          "predicted": "DIFFERENT",
+          "finding_a": "Nmap detected SSH on the target.",
+          "finding_b": "Fictional independent record for the same synthetic configuration issue; not real scan output."
+        },
+        {
+          "pair_id": "PAIR-0028",
+          "expected": "RELATED",
+          "predicted": "DIFFERENT",
+          "finding_a": "Nmap detected an HTTPS service on the target port.",
+          "finding_b": "Certificate validity period is nearing its end."
+        },
+        {
+          "pair_id": "PAIR-0054",
+          "expected": "DIFFERENT",
+          "predicted": "RELATED",
+          "finding_a": "Nmap detected an SMB service on port 445.",
+          "finding_b": "SMB signing configuration finding."
+        }
+      ]
+    },
+    "M3 General LLM": {
+      "status": "NOT RUN",
+      "reason": "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 is not set"
+    },
+    "M4 TypeSafe Jev": {
+      "status": "NOT RUN",
+      "reason": "apikey_22318455d2ebe164302aadc576f77da22ea_5d33006b4fa4714a75379639366b8d9b232ec1a8976009cb4f052d7d1cbd9135 is not set"
+    }
+  },
+  "comparisons_vs_m1": {
+    "M2 Gradient-boosted classifier": {
+      "test": "exact McNemar test on paired correctness",
+      "p_value": 1.0
+    }
+  }
+}

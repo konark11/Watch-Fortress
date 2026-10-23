@@ -17,6 +17,8 @@ const NMAP_PROFILES = [
   { value: "service_version", label: "Service/version detection (no vuln detection)" },
   { value: "os_detection", label: "OS detection (no vuln detection)" },
   { value: "full", label: "Full port scan (no vuln detection)" },
+  { value: "all_ports", label: "All 65,535 ports (no service detection)" },
+  { value: "all_ports_service_version", label: "All 65,535 ports + service/version detection" },
   { value: "vuln_scripts", label: "Vulnerability scripts (NSE vulners + ssl-cert) — finds CVEs" },
 ];
 
@@ -29,7 +31,7 @@ const NUCLEI_SEVERITY_PROFILES = [
 export default function ScansPage() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [availability, setAvailability] = useState<Record<string, boolean>>({});
-  const [scannerType, setScannerType] = useState("nmap");
+  const [selectedScanners, setSelectedScanners] = useState<string[]>(["nmap"]);
   const [target, setTarget] = useState("");
   const [name, setName] = useState("");
   const [nmapProfile, setNmapProfile] = useState("vuln_scripts");
@@ -73,21 +75,34 @@ export default function ScansPage() {
 
   async function launch(e: React.FormEvent) {
     e.preventDefault();
+    if (selectedScanners.length === 0) {
+      alert("Select at least one scanner");
+      return;
+    }
     setLaunching(true);
     try {
-      const options: Record<string, unknown> =
-        scannerType === "nmap"
-          ? { profile: nmapProfile }
-          : scannerType === "nuclei"
-          ? { severity_profile: nucleiSeverity, ...(nucleiTags ? { tags: nucleiTags } : {}) }
-          : {};
-      const resp = await api.post<{ scan_id: number }>("/scans/launch", {
-        name: name || `${scannerType} scan of ${target}`,
-        scanner_type: scannerType,
-        target,
-        options,
-      });
-      watchProgress(resp.scan_id);
+      const results = await Promise.allSettled(
+        selectedScanners.map(async (scannerType) => {
+          const options: Record<string, unknown> =
+            scannerType === "nmap"
+              ? { profile: nmapProfile }
+              : scannerType === "nuclei"
+              ? { severity_profile: nucleiSeverity, ...(nucleiTags ? { tags: nucleiTags } : {}) }
+              : {};
+          const resp = await api.post<{ scan_id: number }>("/scans/launch", {
+            name: name || `${scannerType} scan of ${target}`,
+            scanner_type: scannerType,
+            target,
+            options,
+          });
+          watchProgress(resp.scan_id);
+          return { scannerType, scanId: resp.scan_id };
+        }),
+      );
+      const failed = results.filter((result): result is PromiseRejectedResult => result.status === "rejected");
+      if (failed.length > 0) {
+        alert(`${failed.length} scanner${failed.length === 1 ? "" : "s"} failed to launch. Other selected scanners are running.`);
+      }
       setTarget("");
       setName("");
       load();
@@ -119,14 +134,29 @@ export default function ScansPage() {
           <h3 className="text-xs uppercase tracking-wide text-[var(--text-muted)] mb-4">Launch a Scan</h3>
           <form onSubmit={launch} className="space-y-3">
             <div>
-              <label className="text-xs text-[var(--text-muted)] block mb-1">Scanner</label>
-              <Select value={scannerType} onChange={(e) => setScannerType(e.target.value)} className="w-full">
+              <label className="text-xs text-[var(--text-muted)] block mb-1">Scanners (run in parallel)</label>
+              <div className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--border)] p-3">
                 {SCANNERS.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label} {availability[s.value] === false ? "(not configured)" : ""}
-                  </option>
+                  <label key={s.value} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedScanners.includes(s.value)}
+                      onChange={(e) => {
+                        setSelectedScanners((current) =>
+                          e.target.checked
+                            ? [...current, s.value]
+                            : current.filter((value) => value !== s.value),
+                        );
+                      }}
+                    />
+                    <span>{s.label}</span>
+                    {availability[s.value] === false && <span className="text-xs text-[var(--text-dim)]">(unavailable)</span>}
+                  </label>
                 ))}
-              </Select>
+              </div>
+              <div className="text-xs text-[var(--text-dim)] mt-1">
+                Each scanner gets its own scan record and its output is ingested as soon as that scanner completes.
+              </div>
             </div>
             <div>
               <label className="text-xs text-[var(--text-muted)] block mb-1">Target (IP, hostname, or CIDR)</label>
@@ -136,7 +166,7 @@ export default function ScansPage() {
               <label className="text-xs text-[var(--text-muted)] block mb-1">Scan name (optional)</label>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Weekly perimeter scan" className="w-full" />
             </div>
-            {scannerType === "nmap" && (
+            {selectedScanners.includes("nmap") && (
               <div>
                 <label className="text-xs text-[var(--text-muted)] block mb-1">Scan profile</label>
                 <Select value={nmapProfile} onChange={(e) => setNmapProfile(e.target.value)} className="w-full">
@@ -150,6 +180,11 @@ export default function ScansPage() {
                     findings. Pick "Vulnerability scripts" to have Nmap run NSE vuln-detection scripts.
                   </div>
                 )}
+                {(nmapProfile === "all_ports" || nmapProfile === "all_ports_service_version") && (
+                  <div className="text-xs text-[var(--medium)] mt-1">
+                    This scans all 65,535 TCP ports and may take significantly longer than a top-ports scan.
+                  </div>
+                )}
                 {nmapProfile === "vuln_scripts" && (
                   <div className="text-xs text-[var(--text-dim)] mt-1">
                     Requires the nmap "vulners" NSE script and internet access to vulners.com for CVE
@@ -159,7 +194,7 @@ export default function ScansPage() {
                 )}
               </div>
             )}
-            {scannerType === "nuclei" && (
+            {selectedScanners.includes("nuclei") && (
               <div className="space-y-2">
                 <div>
                   <label className="text-xs text-[var(--text-muted)] block mb-1">Severity</label>
@@ -175,13 +210,13 @@ export default function ScansPage() {
                 </div>
               </div>
             )}
-            {availability[scannerType] === false && (
+            {selectedScanners.some((scanner) => availability[scanner] === false) && (
               <div className="text-xs text-[var(--medium)] bg-[var(--medium-dim)] rounded-lg px-3 py-2">
-                {scannerType} is not currently configured/reachable on this deployment. You can still launch — it will fail with a clear error — or import a report file below instead.
+                One or more selected scanners are not currently configured/reachable. They will fail with a clear error; configured scanners will still run.
               </div>
             )}
-            <Button type="submit" disabled={launching} className="w-full flex items-center justify-center gap-2">
-              <Play size={14} /> {launching ? "Launching..." : "Launch Scan"}
+            <Button type="submit" disabled={launching || selectedScanners.length === 0} className="w-full flex items-center justify-center gap-2">
+              <Play size={14} /> {launching ? "Launching scanners..." : `Launch ${selectedScanners.length || ""} scanner${selectedScanners.length === 1 ? "" : "s"}`}
             </Button>
           </form>
         </Card>

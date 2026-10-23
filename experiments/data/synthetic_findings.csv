@@ -1,0 +1,40 @@
+finding_id,scanner,asset_id,ip,port,protocol,service,cve,title,severity,description
+NMAP-001,Nmap,LAB-WEB-01,192.0.2.10,80,tcp,http,,HTTP service detected,info,Nmap detected an HTTP service on the target port.
+NESSUS-001,Nessus,LAB-WEB-01,192.0.2.10,80,tcp,http,CVE-2021-41773,Apache HTTP Server path traversal,critical,Fictional lab annotation: vulnerability check reports a path traversal condition on the HTTP service.
+NESSUS-002,Nessus,LAB-WEB-01,192.0.2.10,80,tcp,http,,HTTP server version disclosure,low,Server banner reveals product/version information.
+NMAP-002,Nmap,LAB-WEB-01,192.0.2.10,443,tcp,https,,HTTPS service detected,info,Nmap detected an HTTPS service on the target port.
+NESSUS-003,Nessus,LAB-WEB-01,192.0.2.10,443,tcp,https,,TLS certificate expires soon,medium,Certificate validity period is nearing its end.
+NMAP-003,Nmap,LAB-FILE-01,192.0.2.20,445,tcp,microsoft-ds,,SMB service detected,info,Nmap detected an SMB service on port 445.
+NESSUS-004,Nessus,LAB-FILE-01,192.0.2.20,445,tcp,smb,CVE-2017-0144,SMB remote code execution exposure,critical,Fictional lab annotation: vulnerability check reports an SMB-related exposure.
+NESSUS-005,Nessus,LAB-FILE-01,192.0.2.20,445,tcp,smb,,SMB signing not required,medium,SMB signing configuration finding.
+NMAP-004,Nmap,LAB-DB-01,192.0.2.30,5432,tcp,postgresql,,PostgreSQL service detected,info,Nmap detected a PostgreSQL service.
+NESSUS-006,Nessus,LAB-DB-01,192.0.2.30,5432,tcp,postgresql,,PostgreSQL accepts weak authentication configuration,high,Fictional lab annotation: database authentication policy finding.
+NESSUS-007,Nessus,LAB-DB-01,192.0.2.30,5432,tcp,postgresql,,PostgreSQL version is outdated,medium,Installed database version is behind the recommended patch level.
+NMAP-005,Nmap,LAB-ADMIN-01,192.0.2.40,22,tcp,ssh,,SSH service detected,info,Nmap detected SSH on the target.
+NESSUS-008,Nessus,LAB-ADMIN-01,192.0.2.40,22,tcp,ssh,,SSH permits weak cryptographic algorithms,medium,SSH cryptographic configuration finding.
+NESSUS-009,Nessus,LAB-ADMIN-01,192.0.2.40,22,tcp,ssh,,SSH package missing security updates,high,Installed SSH package is missing security updates.
+NMAP-006,Nmap,LAB-WEB-02,192.0.2.11,8080,tcp,http-proxy,,HTTP alternate port detected,info,Nmap detected an HTTP-like service on an alternate port.
+NESSUS-010,Nessus,LAB-WEB-02,192.0.2.11,8080,tcp,http,,Web server exposes administrative endpoint,medium,Administrative endpoint is reachable on the web service.
+NESSUS-011,Nessus,LAB-WEB-02,192.0.2.11,8080,tcp,http,,HTTP response lacks security headers,low,Response omits one or more recommended security headers.
+NMAP-007,Nmap,LAB-DNS-01,192.0.2.50,53,udp,domain,,DNS service detected,info,Nmap detected DNS on UDP port 53.
+NESSUS-012,Nessus,LAB-DNS-01,192.0.2.50,53,udp,domain,,DNS recursion enabled,medium,DNS resolver configuration may allow unintended recursive queries.
+NESSUS-013,Nessus,LAB-DNS-01,192.0.2.50,53,udp,domain,,DNS software version disclosure,low,DNS service exposes software/version information.
+NMAP-008,Nmap,LAB-MAIL-01,192.0.2.60,25,tcp,smtp,,SMTP service detected,info,Nmap detected SMTP on port 25.
+NESSUS-014,Nessus,LAB-MAIL-01,192.0.2.60,25,tcp,smtp,,SMTP permits unauthenticated relay,high,Fictional lab annotation: mail relay policy finding.
+NESSUS-015,Nessus,LAB-MAIL-01,192.0.2.60,25,tcp,smtp,,SMTP supports weak TLS configuration,medium,SMTP transport encryption configuration finding.
+NMAP-009,Nmap,LAB-APP-01,192.0.2.70,3306,tcp,mysql,,MySQL service detected,info,Nmap detected MySQL on port 3306.
+NESSUS-016,Nessus,LAB-APP-01,192.0.2.70,3306,tcp,mysql,,MySQL allows remote connections,medium,Database network exposure configuration finding.
+NESSUS-017,Nessus,LAB-APP-01,192.0.2.70,3306,tcp,mysql,,MySQL account uses weak password policy,high,Database account policy finding.
+NMAP-010,Nmap,LAB-MGMT-01,192.0.2.80,3389,tcp,ms-wbt-server,,RDP service detected,info,Nmap detected Remote Desktop Protocol.
+NESSUS-018,Nessus,LAB-MGMT-01,192.0.2.80,3389,tcp,rdp,,RDP encryption configuration is weak,medium,Remote desktop encryption configuration finding.
+NESSUS-019,Nessus,LAB-MGMT-01,192.0.2.80,3389,tcp,rdp,,RDP service missing security updates,high,Remote desktop software is missing security updates.
+NMAP-011,Nmap,LAB-PRINT-01,192.0.2.90,631,tcp,ipp,,Internet Printing Protocol detected,info,Nmap detected IPP printing service.
+NESSUS-020,Nessus,LAB-PRINT-01,192.0.2.90,631,tcp,ipp,,Printing service exposes device details,low,Printing service information disclosure finding.
+NESSUS-021,Nessus,LAB-PRINT-01,192.0.2.90,631,tcp,ipp,,Printing service configuration permits unsafe operations,medium,Printing service configuration finding.
+NMAP-012,Nmap,LAB-DEV-01,192.0.2.100,3000,tcp,http,,Development web service detected,info,Nmap detected an HTTP development service.
+NESSUS-022,Nessus,LAB-DEV-01,192.0.2.100,3000,tcp,http,,Development endpoint exposes debug information,medium,Debug endpoint may expose application internals.
+NESSUS-023,Nessus,LAB-DEV-01,192.0.2.100,3000,udp,http,,Development dependency has known security advisories,high,Fictional lab annotation: dependency vulnerability finding.
+NESSUS-024,Nessus,LAB-WEB-01,192.0.2.10,80,tcp,http,CVE-2021-41773,Apache HTTP Server path traversal (repeat observation),critical,Fictional repeat observation of the same synthetic root cause; not real scan output.
+ALTSCAN-001,SyntheticAudit,LAB-FILE-01,192.0.2.20,445,tcp,smb,CVE-2017-0144,SMB remote code execution exposure (independent synthetic record),critical,Fictional independent record for the same synthetic root cause; not real scan output.
+NESSUS-025,Nessus,LAB-DB-01,192.0.2.30,5432,tcp,postgresql,,PostgreSQL accepts weak authentication configuration (repeat observation),high,Fictional repeat observation of the same synthetic configuration issue; not real scan output.
+ALTSCAN-002,SyntheticAudit,LAB-ADMIN-01,192.0.2.40,22,tcp,ssh,,SSH permits weak cryptographic algorithms (independent synthetic record),medium,Fictional independent record for the same synthetic configuration issue; not real scan output.

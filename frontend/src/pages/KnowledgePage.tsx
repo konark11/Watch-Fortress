@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, BookOpen, ListChecks, Bug, Wrench, Scale, Lightbulb, X, Trash2 } from "lucide-react";
+import { Plus, BookOpen, ListChecks, Bug, Wrench, Scale, Lightbulb, X, Trash2, Upload } from "lucide-react";
 import { api } from "../api/client";
 import type { KnowledgeDoc } from "../types";
 import { Card, Button, Input, Select, EmptyState } from "../components/ui";
@@ -116,6 +116,9 @@ function StepsInput({ values, onChange, placeholder }: { values: string[]; onCha
 export default function KnowledgePage() {
   const [docs, setDocs] = useState<KnowledgeDoc[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [formMode, setFormMode] = useState<"manual" | "upload">("manual");
+  const [file, setFile] = useState<File | null>(null);
+  const [tags, setTags] = useState("");
   const [selected, setSelected] = useState<{ id: number; title: string; content: string; category: string } | null>(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("playbook");
@@ -138,10 +141,22 @@ export default function KnowledgePage() {
     e.preventDefault();
     setBusy(true);
     try {
-      const content = buildContent(category, fieldValues);
-      await api.post("/knowledge", { title, category, content, tags: [] });
+      if (formMode === "upload") {
+        if (!file) return;
+        const form = new FormData();
+        form.append("file", file);
+        if (title.trim()) form.append("title", title.trim());
+        form.append("category", category);
+        form.append("tags", tags);
+        await api.postForm("/knowledge/upload", form);
+      } else {
+        const content = buildContent(category, fieldValues);
+        await api.post("/knowledge", { title, category, content, tags: [] });
+      }
       setTitle("");
       setFieldValues({});
+      setFile(null);
+      setTags("");
       setShowForm(false);
       load();
     } finally {
@@ -177,10 +192,18 @@ export default function KnowledgePage() {
       {showForm && (
         <Card>
           <form onSubmit={create} className="space-y-4">
+            <div className="flex gap-2 border-b border-[var(--border)] pb-3">
+              <Button type="button" variant={formMode === "manual" ? "secondary" : "ghost"} onClick={() => setFormMode("manual")}>
+                <Plus size={13} className="inline mr-1" /> Write Document
+              </Button>
+              <Button type="button" variant={formMode === "upload" ? "secondary" : "ghost"} onClick={() => setFormMode("upload")}>
+                <Upload size={13} className="inline mr-1" /> Upload File
+              </Button>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-[var(--text-muted)] block mb-1">Title</label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} required className="w-full" />
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} required={formMode === "manual"} placeholder={formMode === "upload" ? "Optional — defaults to filename" : undefined} className="w-full" />
               </div>
               <div>
                 <label className="text-xs text-[var(--text-muted)] block mb-1">Document Type</label>
@@ -190,7 +213,25 @@ export default function KnowledgePage() {
               </div>
             </div>
 
-            {schema.map((f) => (
+            {formMode === "upload" ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-[var(--text-muted)] block mb-1">Document file</label>
+                  <Input
+                    type="file"
+                    accept=".docx,.pdf,.md,.markdown,.txt"
+                    required
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    className="w-full file:mr-3 file:border-0 file:bg-[var(--surface-3)] file:text-[var(--text)] file:px-2 file:py-1 file:rounded"
+                  />
+                  <div className="text-[11px] text-[var(--text-dim)] mt-1">DOCX, PDF, Markdown, or TXT · 10 MB maximum. Text is extracted, chunked, and indexed automatically.</div>
+                </div>
+                <div>
+                  <label className="text-xs text-[var(--text-muted)] block mb-1">Tags <span className="text-[var(--text-dim)]">(comma-separated)</span></label>
+                  <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="incident-response, linux, access-control" className="w-full" />
+                </div>
+              </div>
+            ) : schema.map((f) => (
               <div key={f.key}>
                 <label className="text-xs text-[var(--text-muted)] block mb-1">{f.label}</label>
                 {f.type === "steps" ? (
@@ -212,7 +253,7 @@ export default function KnowledgePage() {
               </div>
             ))}
 
-            <Button type="submit" disabled={busy}>{busy ? "Saving..." : "Save Document"}</Button>
+            <Button type="submit" disabled={busy}>{busy ? (formMode === "upload" ? "Uploading..." : "Saving...") : (formMode === "upload" ? "Upload and Index" : "Save Document")}</Button>
           </form>
         </Card>
       )}
@@ -231,7 +272,7 @@ export default function KnowledgePage() {
                   <span className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{d.category.replace("_", " ")}</span>
                 </div>
                 <div className="text-sm font-medium">{d.title}</div>
-                <div className="text-xs text-[var(--text-dim)] mt-2">{d.created_by} · {new Date(d.updated_at).toLocaleDateString()}</div>
+                <div className="text-xs text-[var(--text-dim)] mt-2">{d.source_filename || d.created_by} · {d.indexed_chunk_count || 0}/{d.chunk_count || 0} chunks indexed · {new Date(d.updated_at).toLocaleDateString()}</div>
               </button>
             );
           })}

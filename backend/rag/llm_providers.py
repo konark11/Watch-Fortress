@@ -37,6 +37,25 @@ OLLAMA_MODEL = os.environ.get("VULN_OLLAMA_MODEL", "llama3")
 ONLINE_BASE_URL = os.environ.get("VULN_ONLINE_LLM_BASE_URL", "")
 ONLINE_API_KEY = os.environ.get("VULN_ONLINE_LLM_API_KEY", "")
 ONLINE_MODEL = os.environ.get("VULN_ONLINE_LLM_MODEL", "gpt-4o-mini")
+OPENROUTER_BASE_URL = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "poolside/laguna-s-2.1:free")
+
+PLAIN_LANGUAGE_SYSTEM_PROMPT = """You are Watch Fortress, a security assistant.
+Answer the user's question using only the supplied information.
+
+Write for a non-technical reader by default:
+- Start with the direct answer.
+- Use short sentences and familiar words.
+- Use bullets when they make the answer easier to scan.
+- Explain a technical term in plain words the first time it is needed.
+- Do not explain what the knowledge base, evidence, retrieval, model, prompt, or RAG is.
+- Do not mention how the answer was generated.
+- Do not repeat the question or add a generic disclaimer.
+- If the information is not enough, say "I don't have enough information to answer that yet" and say what would help.
+- Only use deep technical detail when the user clearly asks for it or is asking another security tool or agent.
+
+Keep the answer focused and useful. Do not invent facts or recommendations."""
 
 
 def _build_context_block(retrieved_docs: list[dict]) -> str:
@@ -57,28 +76,23 @@ class TemplateProvider:
     def generate(self, question: str, retrieved_docs: list[dict]) -> str:
         if not retrieved_docs:
             return (
-                "I couldn't find anything in the knowledge base or CVE/CWE/CAPEC/ATT&CK/OWASP "
-                "reference data that matches this question. A few things that tend to work well:\n\n"
+                "I couldn't find enough information to answer that yet. Try one of these:\n\n"
                 "- Ask about a specific CVE, e.g. \"How do I fix CVE-2024-3400?\"\n"
                 "- Ask about a vulnerability type, e.g. \"Why is SQL injection dangerous?\"\n"
-                "- Ask about your scan data, e.g. \"Show all critical findings\"\n\n"
-                "Or add relevant material to the Knowledge Base so future queries can retrieve it."
+                "- Ask about your scan data, e.g. \"Show all critical findings\""
             )
 
         top_doc, top_score = retrieved_docs[0]
-        parts = [f"Based on the {top_doc['source']} entry for **{top_doc['title']}**:\n\n{top_doc['text']}"]
+        text = " ".join(top_doc["text"].split())
+        if len(text) > 700:
+            text = text[:697].rsplit(" ", 1)[0] + "..."
+        parts = [f"### {top_doc['title']}\n\n{text}"]
 
         if len(retrieved_docs) > 1:
-            parts.append("\n**Related information:**")
+            parts.append("\n**Related topics:**")
             for doc, score in retrieved_docs[1:]:
-                parts.append(f"- [{doc['source']}] {doc['title']}")
+                parts.append(f"- {doc['title']}")
 
-        parts.append(
-            "\n\n_This answer was assembled by retrieving the most relevant entries from the "
-            "local CVE/CWE/CAPEC/ATT&CK/OWASP knowledge base and internal documentation "
-            "(offline template mode - no language model is generating this text; configure "
-            "VULN_RAG_MODE=ollama for natural-language synthesis via a local LLM)._"
-        )
         return "\n".join(parts)
 
 
@@ -94,8 +108,7 @@ class OllamaProvider:
     def generate(self, question: str, retrieved_docs: list[dict]) -> str:
         context = _build_context_block(retrieved_docs)
         prompt = (
-            "You are a security analyst assistant. Answer the question using ONLY the "
-            "context below. If the context doesn't contain the answer, say so plainly.\n\n"
+            f"{PLAIN_LANGUAGE_SYSTEM_PROMPT}\n\n"
             f"Context:\n{context}\n\nQuestion: {question}\n\nAnswer:"
         )
         body = json.dumps({"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}).encode()
@@ -106,12 +119,11 @@ class OllamaProvider:
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
                 data = json.loads(resp.read())
-                return data.get("response", "").strip() or "(empty response from Ollama)"
-        except (urllib.error.URLError, OSError) as e:
+                return data.get("response", "").strip() or "I couldn't generate an answer right now."
+        except (urllib.error.URLError, OSError):
             return (
-                f"Could not reach Ollama at {OLLAMA_BASE_URL} ({e}). "
-                "Falling back to offline template mode is recommended (VULN_RAG_MODE=template) "
-                "if Ollama is not running on this deployment.\n\n" + TemplateProvider().generate(question, retrieved_docs)
+                "I couldn't reach the answer service, so here's the information I found:\n\n"
+                + TemplateProvider().generate(question, retrieved_docs)
             )
 
 
@@ -125,15 +137,14 @@ class OnlineProvider:
     def generate(self, question: str, retrieved_docs: list[dict]) -> str:
         if not (ONLINE_BASE_URL and ONLINE_API_KEY):
             return (
-                "Online mode is not configured (set VULN_ONLINE_LLM_BASE_URL and "
-                "VULN_ONLINE_LLM_API_KEY). Falling back to offline template mode:\n\n"
+                "The online answer service is not available, so here's the information I found:\n\n"
                 + TemplateProvider().generate(question, retrieved_docs)
             )
         context = _build_context_block(retrieved_docs)
         body = json.dumps({
             "model": ONLINE_MODEL,
             "messages": [
-                {"role": "system", "content": "You are a security analyst assistant. Answer using only the provided context."},
+                {"role": "system", "content": PLAIN_LANGUAGE_SYSTEM_PROMPT},
                 {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"},
             ],
         }).encode()
@@ -145,8 +156,31 @@ class OnlineProvider:
             with urllib.request.urlopen(req, timeout=60) as resp:
                 data = json.loads(resp.read())
                 return data["choices"][0]["message"]["content"].strip()
-        except (urllib.error.URLError, OSError, KeyError, IndexError) as e:
-            return f"Online LLM call failed ({e}). Falling back to offline template mode:\n\n" + TemplateProvider().generate(question, retrieved_docs)
+        except (urllib.error.URLError, OSError, KeyError, IndexError):
+            return "I couldn't reach the answer service, so here's the information I found:\n\n" + TemplateProvider().generate(question, retrieved_docs)
+
+
+class OpenRouterProvider:
+    name = f"openrouter ({OPENROUTER_MODEL})"
+
+    def generate(self, question: str, retrieved_docs: list[dict]) -> str:
+        if not OPENROUTER_API_KEY:
+            return "The answer service is not available, so here's the information I found:\n\n" + TemplateProvider().generate(question, retrieved_docs)
+        context = _build_context_block(retrieved_docs)
+        body = json.dumps({"model": OPENROUTER_MODEL, "messages": [
+            {"role": "system", "content": PLAIN_LANGUAGE_SYSTEM_PROMPT},
+            {"role": "user", "content": f"Evidence:\n{context}\n\nQuestion: {question}"},
+        ], "temperature": 0.1, "max_tokens": 800}).encode()
+        req = urllib.request.Request(
+            f"{OPENROUTER_BASE_URL.rstrip('/')}/chat/completions", data=body,
+            headers={"Content-Type": "application/json", "Authorization": "Bearer " + OPENROUTER_API_KEY},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                return json.loads(resp.read())["choices"][0]["message"]["content"].strip()
+        except (urllib.error.HTTPError, urllib.error.URLError, OSError, KeyError, IndexError, ValueError):
+            return "I couldn't reach the answer service, so here's the information I found:\n\n" + TemplateProvider().generate(question, retrieved_docs)
 
 
 def get_provider():
@@ -154,4 +188,6 @@ def get_provider():
         return OllamaProvider()
     if RAG_MODE == "online":
         return OnlineProvider()
+    if RAG_MODE == "openrouter":
+        return OpenRouterProvider()
     return TemplateProvider()

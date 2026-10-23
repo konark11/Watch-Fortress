@@ -9,6 +9,7 @@ from auth.audit import log_action
 from api.schemas import ScanLaunchRequest
 from scanners.orchestrator import launch_scan_background, get_progress, scanner_availability
 from core.ingestion import ingest_scan_result
+from rag.query_engine import ensure_indexed
 
 router = APIRouter()
 
@@ -69,6 +70,11 @@ def launch_scan(payload: ScanLaunchRequest, request: Request, db: Session = Depe
                 s.error_message = None
             s.finished_at = datetime.now(timezone.utc)
             inner_db.commit()
+            if not error:
+                # The retriever is process-local and may have been built
+                # before this scan completed. Rebuild it after committing the
+                # new findings so the assistant can use this scan immediately.
+                ensure_indexed(inner_db, force=True)
         finally:
             inner_db.close()
 
@@ -111,6 +117,7 @@ async def import_scan(
     db.refresh(scan)
 
     summary = ingest_scan_result(db, scan, raw_text, file.filename or "")
+    ensure_indexed(db, force=True)
 
     log_action(db, user, "scan.import", target=f"scan:{scan.id}", details=f"{scanner_type} file={file.filename}",
                ip_address=request.client.host if request.client else "")

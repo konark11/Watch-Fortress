@@ -93,6 +93,9 @@ export interface KnowledgeDoc {
   tags: string[];
   created_by: string | null;
   updated_at: string;
+  chunk_count?: number;
+  indexed_chunk_count?: number;
+  source_filename?: string | null;
 }
 
 export interface ReportJob {

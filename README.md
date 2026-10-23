@@ -28,6 +28,7 @@ development — not just specified:
 | Reports (PDF/HTML/DOCX/JSON) | **Tested** — all 4 formats generate and validate |
 | Scheduling | APScheduler in-process, tested for job registration |
 | RBAC + audit log | **Tested** — confirmed a non-privileged role gets a 403 where it should |
+| Authentication-failure analysis | **Implemented** — failed logins are recorded in the structured audit store and the assistant correlates daily volume, IP/user entities, temporal bursts, and retrieved attack-pattern context |
 | Frontend (React/TypeScript/Tailwind) | **Built and served end-to-end** through the backend; every page's API calls were verified against the real response shapes |
 
 ## Architecture
@@ -131,12 +132,38 @@ files (`.xml` / `.nessus`) at any time regardless of live connectivity.
 ## AI Assistant modes
 
 Set `VULN_RAG_MODE`:
-- `template` (default) — zero dependencies, zero network, always works. Retrieves from CVE/CWE/CAPEC/ATT&CK/OWASP + your Knowledge Base and synthesizes a structured answer.
-- `ollama` — routes generation through a local Ollama server (`VULN_OLLAMA_BASE_URL`, `VULN_OLLAMA_MODEL`) for natural-language answers, still fully air-gapped since Ollama runs on localhost.
+- `template` (default) — zero dependencies, zero network, always works. Retrieves from CVE/CWE/CAPEC/ATT&CK/OWASP + your Knowledge Base and returns a concise answer in plain language.
+- `ollama` — routes generation through a local Ollama server (`VULN_OLLAMA_BASE_URL`, `VULN_OLLAMA_MODEL`) for plain-language answers, still fully air-gapped since Ollama runs on localhost.
+- `openrouter` — routes the retrieved evidence through OpenRouter's chat completions API. Set `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, and optionally `OPENROUTER_BASE_URL` in `.env`. The Docker Compose service forwards these variables to the backend, and local development loads them from the repository `.env`.
+
+When local retrieval has no useful match, the assistant performs a bounded,
+read-only NVD lookup (exact CVE IDs or a short keyword query) and cites that
+result as an internet lookup. Set `VULN_NVD_URL` to use an approved mirror.
 - `online` — routes through any OpenAI-chat-completions-compatible endpoint (`VULN_ONLINE_LLM_BASE_URL`, `VULN_ONLINE_LLM_API_KEY`, `VULN_ONLINE_LLM_MODEL`) for deployments with internet access.
 
 `docker compose --profile llm up` starts a local Ollama container alongside
 the platform if you want to try that mode.
+
+For hosted generation, set `VULN_RAG_MODE=openrouter` and provide
+`OPENROUTER_API_KEY`. The adapter defaults to
+`poolside/laguna-s-2.1:free`; change `OPENROUTER_MODEL` only to another
+OpenRouter model ending in `:free`. Optional embedding and reranking adapters are configured with
+`OPENROUTER_EMBEDDING_MODEL` and `OPENROUTER_RERANK_MODEL` and use the same
+key. The active retrieval path first uses local TF-IDF to build a broad
+candidate set, then uses `OPENROUTER_RERANK_MODEL` when configured to score
+the candidates and pass the best matches to the answer generator. This is an
+optional query-document scoring stage, not a local `CrossEncoder` package;
+the default remains fully offline and uses no key. `OPENROUTER_EMBEDDING_MODEL`
+is available for future dense-retrieval deployments but is not needed by the
+current local index. No paid model is selected or accepted by these adapters.
+
+The assistant can answer questions such as "Show me why login failures
+increased yesterday and whether this looks like an attack." It uses the
+structured `auth.login_failed` audit events for exact aggregation and
+correlation, then retrieves attack-pattern context from the local knowledge
+base. The same evidence is available from `GET /api/assistant/login-failures`.
+Analysis uses UTC calendar days and reports when fields needed for geographic
+or impossible-travel analysis are not present.
 
 ## Building an air-gapped bundle
 

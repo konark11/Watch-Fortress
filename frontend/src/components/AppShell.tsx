@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Server, Radar, ShieldAlert, MessageSquareText,
   FileText, BookOpen, Users, CalendarClock, LogOut, KeyRound, Globe2,
   PanelLeftClose, PanelLeftOpen,
+  FlaskConical,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api/client";
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
   { to: "/assistant", label: "AI Assistant", icon: MessageSquareText },
   { to: "/reports", label: "Reports", icon: FileText },
   { to: "/knowledge", label: "Knowledge Base", icon: BookOpen },
+  { to: "/research", label: "Research Lab", icon: FlaskConical },
   { to: "/schedules", label: "Schedules", icon: CalendarClock },
 ];
 

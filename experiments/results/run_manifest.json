@@ -1,0 +1,33 @@
+{
+  "timestamp": "2026-10-23T19:04:31.051248+00:00",
+  "seed": 20261023,
+  "bootstrap_resamples": 1000,
+  "config": {
+    "findings_path": "experiments/data/synthetic_findings.csv",
+    "pairs_path": "experiments/data/synthetic_labeled_pairs.csv",
+    "random_seed": 20261023,
+    "bootstrap_resamples": 1000,
+    "cost_per_token": null,
+    "llm": {
+      "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+      "model": "poolside/laguna-s-2.1:free",
+      "api_key_env": "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"
+    },
+    "jev": {
+      "endpoint": "",
+      "model": "",
+      "api_key_env": "apikey_22318455d2ebe164302aadc576f77da22ea_5d33006b4fa4714a75379639366b8d9b232ec1a8976009cb4f052d7d1cbd9135"
+    }
+  },
+  "input_hashes": {
+    "experiments\\data\\synthetic_findings.csv": "6b46264b9d434df1917827039efa07b8aaf4416dd8dd33f54d36e9d6f52da5c7",
+    "experiments\\data\\synthetic_labeled_pairs.csv": "040524f8ae3d3253f2aec6e48dc85337037bb6df71803f47b816171881809672"
+  },
+  "method_versions": {
+    "M1 Rule-based": "rules-v1",
+    "M2 Gradient-boosted classifier": "scikit-learn GradientBoostingClassifier",
+    "M3 General LLM": "poolside/laguna-s-2.1:free",
+    "M4 TypeSafe Jev": "endpoint or model is not configured"
+  },
+  "provenance": "SYNTHETIC_OR_MIXED"
+}
