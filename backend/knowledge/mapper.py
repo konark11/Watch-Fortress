@@ -67,7 +67,9 @@ class VulnKnowledgeBase:
         return self.attack_db.get(technique_id.upper(), {"name": technique_id, "tactic": "Unknown"})
 
     def lookup_owasp(self, owasp_id: str) -> dict:
-        return self.owasp_db.get(owasp_id, {"name": owasp_id})
+        if not owasp_id:
+            return {"name": owasp_id or ""}
+        return self.owasp_db.get(owasp_id.upper(), {"name": owasp_id})
 
     def is_kev(self, cve_id: str) -> Optional[dict]:
         return self.kev_catalog.get(cve_id.upper())
