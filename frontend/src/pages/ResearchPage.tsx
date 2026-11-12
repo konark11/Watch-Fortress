@@ -13,7 +13,7 @@ type Result = {
 
 export default function ResearchPage() {
   const [configs, setConfigs] = useState<Config[]>([]);
-  const [configuration, setConfiguration] = useState("tfidf");
+  const [configuration, setConfiguration] = useState("vector_rag");
   const [question, setQuestion] = useState("What is SQL injection?");
   const [topK, setTopK] = useState(5);
   const [result, setResult] = useState<Result | null>(null);

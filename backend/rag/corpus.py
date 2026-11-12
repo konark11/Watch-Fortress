@@ -17,8 +17,8 @@ builder to also pull in locally-mirrored vendor bulletins the same way
 KnowledgeDoc entries are pulled in today - see knowledge/updater.py for
 how new offline intel gets added without code changes.
 
-Each corpus entry is a flat {id, source, title, text} dict - simple and
-inspectable, since the retriever needs raw text, not embeddings.
+Each corpus entry is a flat {id, source, title, text} dict. The vector
+retriever embeds this text once when the index is built.
 """
 from __future__ import annotations
 from sqlalchemy.orm import Session
@@ -95,6 +95,7 @@ def build_corpus(db: Session | None = None) -> list[dict]:
                     "source": f"Internal KB ({kdoc.category.value})",
                     "title": f"{kdoc.title} (chunk {chunk.chunk_index + 1})",
                     "text": chunk.content,
+                    "embedding": chunk.embedding,
                 })
 
         # Keep completed scan evidence in the same retrievable corpus as the

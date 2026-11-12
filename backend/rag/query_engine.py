@@ -13,7 +13,7 @@ relevant CONTEXT about SQL injection, but it can't enumerate rows from
 your actual scan data), the engine first checks whether the question looks
 like a request for live platform data and, if so, answers it with a real
 SQL query against the Vulnerability/Asset tables. Otherwise it falls back
-to TF-IDF retrieval + the configured generation backend (rag/llm_providers).
+to dense-vector retrieval + the configured generation backend (rag/llm_providers).
 """
 from __future__ import annotations
 import logging
@@ -22,14 +22,15 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from models.database import Vulnerability, Finding, Asset, Scan, ScanStatus, Severity
-from rag.retriever import TfidfRetriever
+from rag.retriever import VectorRetriever
 from rag.corpus import build_corpus
+from rag.embeddings import embed_texts
 from rag.llm_providers import get_provider
 from rag.internet_lookup import lookup_question
 from rag.openrouter_services import rerank as openrouter_rerank
 from security.login_analysis import analyze_login_failures, render_login_analysis
 
-_retriever = TfidfRetriever()
+_retriever = VectorRetriever()
 _indexed = False
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ VULN_TYPE_KEYWORDS = {
 SEVERITIES = {s.value for s in Severity}
 
 # Small-talk / help intents. These aren't knowledge questions at all, so
-# routing them through TF-IDF retrieval will (correctly) find nothing and
+# routing them through vector retrieval will (correctly) find nothing and
 # produce a confusing "couldn't find anything" reply. Handle them directly
 # instead, with a short greeting plus a few example questions the assistant
 # can actually answer.
@@ -89,7 +90,14 @@ def ensure_indexed(db: Session, force: bool = False):
     global _indexed
     if _indexed and not force:
         return
-    _retriever.index(build_corpus(db))
+    documents = build_corpus(db)
+    missing = [document for document in documents if not document.get("embedding")]
+    generated = iter(embed_texts([document["text"] for document in missing]))
+    embeddings = [
+        document.get("embedding") or next(generated)
+        for document in documents
+    ]
+    _retriever.index(documents, embeddings=embeddings, embedder=embed_texts)
     _indexed = True
 
 
@@ -545,7 +553,7 @@ def ask(db: Session, question: str, history: list[dict] | None = None, k: int = 
 
     # A scan target is often the most important part of a question, but
     # generic words such as "recent", "problem", and "explain" can dilute
-    # its TF-IDF score. Promote matching completed-scan records so the LLM
+    # its vector score. Promote matching completed-scan records so the LLM
     # receives the actual scan evidence first.
     target_tokens = re.findall(r"\b[a-z0-9][a-z0-9.-]*\.[a-z]{2,}\b|\b\d{1,3}(?:\.\d{1,3}){3}\b", question.lower())
     if target_tokens:

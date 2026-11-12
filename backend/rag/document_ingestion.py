@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from models.database import KnowledgeChunk, KnowledgeDoc
 from rag.chunking import chunk_text
-from rag.embeddings import embed_text
+from rag.embeddings import embed_texts
 from rag.relevance import clean_text, is_indexable, relevance_score
 
 
@@ -66,15 +66,16 @@ def persist_chunks(
 ) -> dict[str, int]:
     chunks = chunk_text(clean_text(text), strategy="sliding", size=400, overlap=50)
     timestamp = datetime.now(timezone.utc).isoformat()
+    vectors = embed_texts(chunks)
     indexed_count = 0
-    for index, content in enumerate(chunks):
+    for index, (content, vector) in enumerate(zip(chunks, vectors)):
         score = relevance_score(content)
         indexed = is_indexable(content, score)
         db.add(KnowledgeChunk(
             document_id=document.id,
             chunk_index=index,
             content=content,
-            embedding=embed_text(content),
+            embedding=vector,
             metadata_json={
                 "source_filename": filename,
                 "content_type": content_type or "application/octet-stream",

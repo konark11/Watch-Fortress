@@ -24,6 +24,21 @@ def embed_text(text: str) -> list[float]:
     return [round(value / norm, 8) for value in vector] if norm else vector
 
 
+def embed_texts(texts: list[str], batch_size: int = 64) -> list[list[float]]:
+    """Embed text with the configured provider, falling back to offline vectors."""
+    from rag.openrouter_services import EMBEDDING_MODEL, KEY, embed
+
+    if not texts:
+        return []
+    if not (KEY and EMBEDDING_MODEL):
+        return [embed_text(text) for text in texts]
+
+    vectors: list[list[float]] = []
+    for start in range(0, len(texts), batch_size):
+        vectors.extend(embed(texts[start:start + batch_size]))
+    return vectors
+
+
 def embed_corpus(db: Any = None, save_path: str | None = None) -> dict[str, dict[str, Any]]:
     """Generate normalized vector embeddings for all documents in the knowledge corpus."""
     backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -45,7 +60,7 @@ def embed_corpus(db: Any = None, save_path: str | None = None) -> dict[str, dict
         embeddings_index: dict[str, dict[str, Any]] = {}
         for d in docs:
             doc_id = d["id"]
-            vector = embed_text(d["text"])
+            vector = embed_texts([d["text"]])[0]
             embeddings_index[doc_id] = {
                 "id": doc_id,
                 "source": d["source"],

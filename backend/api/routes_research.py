@@ -14,14 +14,14 @@ router = APIRouter()
 
 class ExperimentRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
-    configuration: str = Field(default="tfidf", pattern="^(tfidf|rag_llm)$")
+    configuration: str = Field(default="vector_rag", pattern="^(vector_rag|rag_llm)$")
     top_k: int = Field(default=5, ge=1, le=20)
 
 
 @router.get("/configurations")
 def configurations(_: User = Depends(get_current_user)):
     return {"configurations": [
-        {"id": "tfidf", "label": "TF-IDF retrieval only"},
+        {"id": "vector_rag", "label": "Embedding vector retrieval only"},
         {"id": "rag_llm", "label": "RAG + configured LLM"},
     ]}
 

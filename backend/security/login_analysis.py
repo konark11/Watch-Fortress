@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from models.database import AuditLog
 from rag.corpus import build_corpus
-from rag.retriever import TfidfRetriever
+from rag.retriever import VectorRetriever
 
 
 def _utc_day_bounds(day: datetime) -> tuple[datetime, datetime]:
@@ -103,7 +103,7 @@ def analyze_login_failures(db: Session, day: datetime | None = None) -> dict:
     else:
         conclusion = "not enough evidence to classify as an attack"
 
-    retriever = TfidfRetriever()
+    retriever = VectorRetriever()
     retriever.index(build_corpus(db))
     context = retriever.retrieve(
         "credential stuffing brute force password spraying repeated failed logins", k=3

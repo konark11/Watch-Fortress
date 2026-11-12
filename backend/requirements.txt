@@ -11,8 +11,6 @@ Jinja2==3.1.6
 reportlab==4.4.10
 python-docx==1.2.0
 pypdf==6.1.2
-scikit-learn==1.8.0
-numpy==2.4.4
 PyYAML==6.0.3
 
 # Optional, only needed if VULN_DATABASE_URL points at PostgreSQL instead

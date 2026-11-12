@@ -1,17 +1,13 @@
-"""Optional OpenRouter embedding and reranking adapters.
-
-The default TF-IDF index remains offline and deterministic. These adapters
-are opt-in and reject model IDs that are not explicitly free.
-"""
+"""OpenRouter adapters for embedding, reranking, and generation support."""
 from __future__ import annotations
 import json
 import os
 import urllib.request
 
 BASE_URL = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
-KEY = os.environ.get("OPENROUTER_API_KEY", "")
-EMBEDDING_MODEL = os.environ.get("OPENROUTER_EMBEDDING_MODEL", "")
-RERANK_MODEL = os.environ.get("OPENROUTER_RERANK_MODEL", "")
+KEY = os.environ.get("OPENROUTER_API_KEY", "").strip()
+EMBEDDING_MODEL = os.environ.get("OPENROUTER_EMBEDDING_MODEL", "").strip()
+RERANK_MODEL = os.environ.get("OPENROUTER_RERANK_MODEL", "").strip()
 
 
 def _post(path: str, payload: dict) -> dict:
@@ -32,7 +28,10 @@ def embed(texts: list[str]) -> list[list[float]]:
     if not EMBEDDING_MODEL:
         raise RuntimeError("Set OPENROUTER_EMBEDDING_MODEL to enable API embeddings")
     data = _post("/embeddings", {"model": EMBEDDING_MODEL, "input": texts})
-    return [item["embedding"] for item in data["data"]]
+    embeddings = [item["embedding"] for item in data["data"]]
+    if len(embeddings) != len(texts) or not all(isinstance(item, list) for item in embeddings):
+        raise ValueError("OpenRouter embedding response did not match the input batch")
+    return embeddings
 
 
 def rerank(query: str, documents: list[str]) -> list[float]:
