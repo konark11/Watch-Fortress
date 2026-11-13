@@ -12,8 +12,9 @@ import shutil
 import subprocess
 import tempfile
 import os
+import time
 from typing import Callable, Optional
-from scanners.base import ScannerBackend
+from scanners.base import ScannerBackend, ScannerCancelled
 
 PROFILE_FLAGS = {
     "quick": ["-T4", "-F"],
@@ -48,13 +49,30 @@ class NmapScanner(ScannerBackend):
         cmd = ["nmap", *flags, "-oX", out_path, target]
         # Nmap scans, especially all 65,535 ports, may legitimately run for
         # longer than a fixed application-level timeout.
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        cancel_check = options.get("_cancel_check")
+        try:
+            while proc.poll() is None:
+                if callable(cancel_check) and cancel_check():
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                        proc.wait()
+                    raise ScannerCancelled()
+                time.sleep(0.5)
+            stdout, stderr = proc.communicate()
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
 
         if on_progress:
             on_progress(90, "nmap scan finished, parsing results")
 
         if proc.returncode != 0 and not os.path.exists(out_path):
-            raise RuntimeError(f"nmap failed: {proc.stderr[:500]}")
+            raise RuntimeError(f"nmap failed: {stderr[:500]}")
 
         with open(out_path, "r", encoding="utf-8", errors="ignore") as f:
             xml_output = f.read()

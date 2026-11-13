@@ -1,0 +1,1 @@
+"""Persistent, incremental RAG indexing."""

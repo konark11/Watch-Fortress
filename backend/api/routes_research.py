@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from models.database import get_db, User
 from auth.security import get_current_user
-from rag.query_engine import ensure_indexed, _retriever, _rerank_candidates
+from rag.query_engine import production_retrieve
 from rag.llm_providers import get_provider
 
 router = APIRouter()
@@ -29,9 +29,7 @@ def configurations(_: User = Depends(get_current_user)):
 @router.post("/run")
 def run_experiment(payload: ExperimentRequest, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     started = perf_counter()
-    ensure_indexed(db)
-    retrieved = _retriever.retrieve(payload.question, max(payload.top_k * 4, 20))
-    retrieved = _rerank_candidates(payload.question, retrieved, payload.top_k)
+    retrieved = production_retrieve(db, payload.question, payload.top_k)
     result = {
         "configuration": payload.configuration,
         "question": payload.question,

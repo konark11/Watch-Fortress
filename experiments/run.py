@@ -66,9 +66,9 @@ def run(config_path: str | Path) -> int:
     config = yaml.safe_load(config_file.read_text(encoding="utf-8")) or {}
     llm_config = config.setdefault("llm", {})
     jev_config = config.setdefault("jev", {})
-    if not llm_config.get("endpoint") and str(llm_config.get("api_key_env", "")).startswith("sk-or-"):
+    if not llm_config.get("endpoint"):
         llm_config["endpoint"] = os.environ.get(
-            "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
+            "OPENAI_BASE_URL", "https://api.openai.com/v1"
         ).rstrip("/") + "/chat/completions"
     if not llm_config.get("model") and llm_config.get("endpoint"):
         llm_config["model"] = os.environ.get("OPENROUTER_MODEL", "")

@@ -5,9 +5,25 @@ bootstrap_resamples: 1000
 cost_per_token: null
 llm:
   endpoint: ""
-  model: ""
-  api_key_env: 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
+  model: "openai/gpt-oss-120b"
+  api_key_env: OPENAI_API_KEY
 jev:
   endpoint: ""
-  model: ""
-  api_key_env: apikey_22318455d2ebe164302aadc576f77da22ea_5d33006b4fa4714a75379639366b8d9b232ec1a8976009cb4f052d7d1cbd9135
+  model: "jev-latest"
+  api_key_env: JEV_API_KEY
+rag:
+  embedding_model: BAAI/bge-base-en-v1.5
+  reranker_model: BAAI/bge-reranker-v2-m3
+  reranker_fallback: BAAI/bge-reranker-base
+  chunk_size: 450
+  chunk_overlap: 50
+  dense_top_k: 50
+  sparse_top_k: 50
+  rrf_k: 60
+  final_evidence_k: 5
+  experiment_arms:
+    - LLM-only
+    - Vector RAG
+    - Hybrid RAG
+    - Hybrid + JEV verification
+    - direct JEV retrieval

@@ -11,6 +11,8 @@ table is empty), then log in via /api/auth/login to get a bearer token.
 from __future__ import annotations
 import os
 import sys
+import logging
+from contextlib import asynccontextmanager
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -33,28 +35,73 @@ def _load_local_env() -> None:
             key, value = line.split("=", 1)
             key = key.strip()
             value = value.strip().strip("\"'")
-            if key and key not in os.environ:
+            if key and not os.environ.get(key):
                 os.environ[key] = value
 
 
 _load_local_env()
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from models.database import init_db
 from scheduling.scheduler import start_scheduler, load_all_schedules
+from observability import configure, set_correlation, span, http_requests, http_errors, http_duration, increment, observe
 
 BASE_DIR = os.path.dirname(__file__)
 FRONTEND_DIST = os.path.join(BASE_DIR, "..", "frontend", "dist")
+logger = logging.getLogger(__name__)
+
+
+def _preload_embeddings_enabled() -> bool:
+    return os.environ.get("RAG_PRELOAD_EMBEDDINGS", "true").strip().lower() in {"1", "true", "yes"}
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    if _preload_embeddings_enabled():
+        from rag.embeddings import warmup_embeddings
+        try:
+            result = warmup_embeddings()
+            logger.info(
+                "rag embeddings preloaded: duration_ms=%s metadata=%s",
+                result["duration_ms"],
+                result["embedding"],
+            )
+        except Exception:
+            logger.exception("rag embedding preload failed; deterministic fallback remains available")
+    yield
 
 app = FastAPI(
     title="Watch Fortress",
     description="Integrates Nmap, OpenVAS, Nessus, and Nuclei into one dashboard with correlation, risk scoring, RAG-powered assistance, and reporting.",
     version="1.0.0",
+    lifespan=lifespan,
 )
+configure()
+
+
+@app.middleware("http")
+async def observability_middleware(request: Request, call_next):
+    route = request.url.path
+    correlation = set_correlation(request.headers.get("x-correlation-id"))
+    started = __import__("time").monotonic()
+    status_code = 500
+    with span("http.request", route=route, http_method=request.method):
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            response.headers["X-Correlation-ID"] = correlation
+            return response
+        finally:
+            elapsed = __import__("time").monotonic() - started
+            status_class = f"{status_code // 100}xx"
+            increment(http_requests, route, status_class)
+            if status_code >= 400:
+                increment(http_errors, route, status_class)
+            observe(http_duration, elapsed, route)
 
 app.add_middleware(
     CORSMiddleware,
@@ -71,6 +118,7 @@ from api import (  # noqa: E402
     routes_auth, routes_users, routes_assets, routes_scans, routes_vulnerabilities,
     routes_dashboard, routes_rag, routes_reports, routes_knowledge, routes_schedules,
     routes_audit, routes_ws, routes_threat_intel, routes_exploitdb, routes_research,
+    routes_observability,
 )
 from experiments.api import router as experiment_router  # noqa: E402
 
@@ -89,6 +137,7 @@ app.include_router(routes_threat_intel.router, prefix="/api/threat-intel", tags=
 app.include_router(routes_exploitdb.router, prefix="/api/exploit-db", tags=["exploit-db"])
 app.include_router(routes_research.router, prefix="/api/research", tags=["research"])
 app.include_router(experiment_router, prefix="/api/research-lab", tags=["research-lab"])
+app.include_router(routes_observability.router, prefix="/api/observability", tags=["observability"])
 app.include_router(routes_ws.router, tags=["websocket"])
 
 

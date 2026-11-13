@@ -13,6 +13,7 @@ import KnowledgePage from "./pages/KnowledgePage";
 import SchedulesPage from "./pages/SchedulesPage";
 import AdminPage from "./pages/AdminPage";
 import ExperimentsPage from "../../experiments/ui/ExperimentsPage";
+import RouteErrorBoundary from "./components/RouteErrorBoundary";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -46,10 +47,10 @@ export default function App() {
             <Route path="scans" element={<ScansPage />} />
             <Route path="vulnerabilities" element={<VulnerabilitiesPage />} />
             <Route path="threat-intel" element={<ThreatIntelPage />} />
-            <Route path="assistant" element={<AssistantPage />} />
+            <Route path="assistant" element={<RouteErrorBoundary routeName="assistant"><AssistantPage /></RouteErrorBoundary>} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="knowledge" element={<KnowledgePage />} />
-            <Route path="research" element={<ExperimentsPage />} />
+            <Route path="research" element={<RouteErrorBoundary routeName="research"><ExperimentsPage /></RouteErrorBoundary>} />
             <Route path="schedules" element={<SchedulesPage />} />
             <Route path="admin" element={<AdminPage />} />
           </Route>

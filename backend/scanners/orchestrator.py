@@ -14,9 +14,6 @@ matching the same "portable first" philosophy as the SOC Log Analytics
 platform.
 """
 from __future__ import annotations
-import threading
-import traceback
-from datetime import datetime, timezone
 from typing import Callable
 
 from scanners.nmap_scanner import NmapScanner
@@ -33,40 +30,23 @@ REGISTRY = {
     "custom": CustomScriptScanner(),
 }
 
-_progress_store: dict[int, dict] = {}
-
-
 def get_progress(scan_id: int) -> dict:
-    return _progress_store.get(scan_id, {"pct": 0, "message": "Not started"})
+    return {"pct": 0, "message": "Progress is persisted by the job worker"}
 
 
 def scanner_availability() -> dict:
     return {name: backend.is_available() for name, backend in REGISTRY.items()}
 
 
-def launch_scan_background(scan_id: int, scanner_type: str, target: str, options: dict, on_complete: Callable[[int, dict | None, str | None], None]):
-    thread = threading.Thread(
-        target=_run_scan,
-        args=(scan_id, scanner_type, target, options, on_complete),
-        daemon=True,
-    )
-    thread.start()
-
-
-def _run_scan(scan_id: int, scanner_type: str, target: str, options: dict, on_complete: Callable):
+def run_scan(
+    scan_id: int,
+    scanner_type: str,
+    target: str,
+    options: dict,
+    on_progress: Callable[[int, str], None],
+) -> dict:
+    """Run one scanner synchronously for a durable worker process."""
     backend = REGISTRY.get(scanner_type)
     if backend is None:
-        on_complete(scan_id, None, f"Unknown scanner type: {scanner_type}")
-        return
-
-    def progress_cb(pct: int, message: str):
-        _progress_store[scan_id] = {"pct": pct, "message": message, "updated_at": datetime.now(timezone.utc).isoformat()}
-
-    try:
-        _progress_store[scan_id] = {"pct": 0, "message": "Queued"}
-        result = backend.launch(target, options, on_progress=progress_cb)
-        on_complete(scan_id, result, None)
-    except Exception as e:
-        traceback.print_exc()
-        _progress_store[scan_id] = {"pct": 100, "message": f"Failed: {e}"}
-        on_complete(scan_id, None, str(e))
+        raise ValueError(f"Unknown scanner type: {scanner_type}")
+    return backend.launch(target, options, on_progress=on_progress)

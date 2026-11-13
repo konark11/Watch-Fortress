@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
-import { FileText, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { api, downloadFile } from "../api/client";
-import type { ReportJob } from "../types";
+import type { ReportRecord } from "../types";
 import { Card, Button, Select, EmptyState } from "../components/ui";
 
+const REPORT_TYPES = [
+  { value: "technical", label: "Technical Remediation", desc: "Detailed host exposures, open ports, and patch commands" },
+  { value: "executive", label: "Executive Summary", desc: "High-level risk posture, KPI charts, and threat landscape" },
+  { value: "compliance", label: "Compliance Assessment", desc: "Audit mapping to PCI-DSS, ISO 27001, or NIST CSF" },
+];
+
 export default function ReportsPage() {
-  const [reports, setReports] = useState<ReportJob[]>([]);
-  const [reportType, setReportType] = useState("executive");
+  const [reports, setReports] = useState<ReportRecord[]>([]);
+  const [reportType, setReportType] = useState("technical");
   const [reportFormat, setReportFormat] = useState("pdf");
   const [framework, setFramework] = useState("PCI-DSS");
   const [busy, setBusy] = useState(false);
@@ -16,7 +22,7 @@ export default function ReportsPage() {
   }, []);
 
   function load() {
-    api.get<{ reports: ReportJob[] }>("/reports").then((r) => setReports(r.reports));
+    api.get<{ reports: ReportRecord[] }>("/reports").then((r) => setReports(r.reports));
   }
 
   async function generate(e: React.FormEvent) {
@@ -25,83 +31,145 @@ export default function ReportsPage() {
     try {
       const resp = await api.post<{ report_id: number; download_url: string }>("/reports/generate", {
         report_type: reportType,
-        report_format: reportFormat,
+        format: reportFormat,
+        scope: "all",
         compliance_framework: reportType === "compliance" ? framework : undefined,
       });
+      await downloadFile(resp.download_url, `report_${reportType}.${reportFormat}`);
       load();
-      await downloadFile(`/reports/${resp.report_id}/download`, `report.${reportFormat}`);
     } catch (err: any) {
-      alert(err.message || "Report generation failed");
+      alert(err.message || "Failed to generate report");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Title */}
       <div>
-        <h1 className="text-xl font-bold">Reports</h1>
-        <p className="text-sm text-[var(--text-muted)] mt-1">Executive, technical, and compliance reports for security teams and stakeholders</p>
+        <h1 className="text-base font-semibold text-[var(--text)]">
+          Reports
+        </h1>
+        <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+          Generate compliance dossiers, executive briefings, and technical remediation export files.
+        </p>
       </div>
 
-      <Card>
-        <h3 className="text-xs uppercase tracking-wide text-[var(--text-muted)] mb-4">Generate a Report</h3>
-        <form onSubmit={generate} className="flex gap-3 items-end flex-wrap">
-          <div>
-            <label className="text-xs text-[var(--text-muted)] block mb-1">Report Type</label>
-            <Select value={reportType} onChange={(e) => setReportType(e.target.value)}>
-              <option value="executive">Executive Summary</option>
-              <option value="technical">Technical Detail</option>
-              <option value="compliance">Compliance Mapping</option>
-            </Select>
+      {/* Generation Form Card */}
+      <Card
+        header="Generate report"
+        subtitle="Select template scope and output format"
+      >
+        <form onSubmit={generate} className="space-y-3.5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            {REPORT_TYPES.map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setReportType(t.value)}
+                className={`p-3 rounded-[5px] border text-left transition-colors cursor-pointer ${
+                  reportType === t.value
+                    ? "bg-[var(--surface-2)] border-[var(--border-strong)] text-[var(--text)] font-medium"
+                    : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                }`}
+              >
+                <div className="text-xs font-medium text-[var(--text)] mb-0.5">{t.label}</div>
+                <div className="text-[11px] text-[var(--text-tertiary)] leading-tight">{t.desc}</div>
+              </button>
+            ))}
           </div>
-          {reportType === "compliance" && (
+
+          <div className="flex flex-wrap items-end gap-3 pt-2 border-t border-[var(--border)]">
+            {reportType === "compliance" && (
+              <div>
+                <label className="text-xs font-medium text-[var(--text)] block mb-1">
+                  Framework
+                </label>
+                <Select
+                  value={framework}
+                  onChange={(e) => setFramework(e.target.value)}
+                  className="w-44"
+                >
+                  <option value="PCI-DSS">PCI-DSS v4.0</option>
+                  <option value="ISO27001">ISO/IEC 27001</option>
+                  <option value="NIST_CSF">NIST CSF 2.0</option>
+                </Select>
+              </div>
+            )}
+
             <div>
-              <label className="text-xs text-[var(--text-muted)] block mb-1">Framework</label>
-              <Select value={framework} onChange={(e) => setFramework(e.target.value)}>
-                <option value="PCI-DSS">PCI-DSS</option>
-                <option value="ISO27001">ISO 27001</option>
-                <option value="NIST_CSF">NIST CSF</option>
+              <label className="text-xs font-medium text-[var(--text)] block mb-1">
+                Output format
+              </label>
+              <Select
+                value={reportFormat}
+                onChange={(e) => setReportFormat(e.target.value)}
+                className="w-40"
+              >
+                <option value="pdf">PDF Document</option>
+                <option value="html">Interactive HTML</option>
+                <option value="docx">Microsoft Word (DOCX)</option>
+                <option value="json">Machine JSON</option>
               </Select>
             </div>
-          )}
-          <div>
-            <label className="text-xs text-[var(--text-muted)] block mb-1">Format</label>
-            <Select value={reportFormat} onChange={(e) => setReportFormat(e.target.value)}>
-              <option value="pdf">PDF</option>
-              <option value="html">HTML</option>
-              <option value="docx">DOCX</option>
-              <option value="json">JSON</option>
-            </Select>
+
+            <Button
+              type="submit"
+              disabled={busy}
+              variant="primary"
+              icon={Download}
+            >
+              {busy ? "Generating..." : "Generate report"}
+            </Button>
           </div>
-          <Button type="submit" disabled={busy} className="flex items-center gap-2">
-            <FileText size={14} /> {busy ? "Generating..." : "Generate & Download"}
-          </Button>
         </form>
       </Card>
 
-      <Card>
-        <h3 className="text-xs uppercase tracking-wide text-[var(--text-muted)] mb-4">Report History</h3>
+      {/* Report History */}
+      <Card
+        header="Report archive"
+        subtitle="Historical export documents"
+      >
         {reports.length === 0 ? (
-          <EmptyState title="No reports generated yet" />
+          <EmptyState
+            title="No reports generated"
+            hint="Generate a report above to create an export file."
+          />
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-[var(--border)]">
             {reports.map((r) => (
-              <div key={r.id} className="flex items-center justify-between py-2.5 border-b border-[var(--border-soft)] last:border-0">
-                <div>
-                  <div className="text-sm font-medium capitalize">
-                    {r.report_type} Report {r.compliance_framework && `— ${r.compliance_framework}`}
+              <div
+                key={r.id}
+                className="py-2.5 flex items-center justify-between gap-3 text-xs"
+              >
+                <div className="min-w-0">
+                  <div className="font-medium text-[var(--text)] capitalize flex items-center gap-2">
+                    <span>{r.report_type} report</span>
+                    {r.compliance_framework && (
+                      <span className="text-[10px] font-mono-data px-1.5 py-0.2 rounded bg-[var(--surface-2)] text-[var(--text-secondary)] uppercase">
+                        {r.compliance_framework}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-xs text-[var(--text-dim)]">
-                    {new Date(r.generated_at).toLocaleString()} · {r.generated_by} · {r.scope_description}
+                  <div className="text-[11px] text-[var(--text-tertiary)] font-mono-data mt-0.5">
+                    {new Date(r.generated_at).toLocaleString()} · Operator: {r.generated_by || "System"}
                   </div>
                 </div>
-                <button
-                  onClick={() => downloadFile(`/reports/${r.id}/download`, `report.${r.report_format}`).catch((err) => alert(err.message))}
-                  className="flex items-center gap-1.5 text-xs text-[var(--brand)] hover:underline uppercase font-semibold"
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  icon={Download}
+                  onClick={() =>
+                    downloadFile(`/reports/${r.id}/download`, `report.${r.report_format}`).catch(
+                      (err) => alert(err.message),
+                    )
+                  }
+                  className="font-mono-data uppercase shrink-0"
                 >
-                  <Download size={13} /> {r.report_format}
-                </button>
+                  {r.report_format}
+                </Button>
               </div>
             ))}
           </div>

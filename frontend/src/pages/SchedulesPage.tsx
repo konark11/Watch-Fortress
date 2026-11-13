@@ -28,7 +28,10 @@ export default function SchedulesPage() {
     setBusy(true);
     try {
       await api.post("/schedules", {
-        name, scanner_type: scannerType, target, frequency,
+        name,
+        scanner_type: scannerType,
+        target,
+        frequency,
         cron_expression: frequency === "custom_cron" ? cron : undefined,
         rescan_on_remediation: rescanOnRemediation,
       });
@@ -37,7 +40,7 @@ export default function SchedulesPage() {
       setTarget("");
       load();
     } catch (err: any) {
-      alert(err.message);
+      alert(err.message || "Failed to create schedule");
     } finally {
       setBusy(false);
     }
@@ -49,108 +52,215 @@ export default function SchedulesPage() {
   }
 
   async function remove(id: number) {
-    if (!confirm("Delete this schedule?")) return;
+    if (!confirm("Delete this recurring schedule?")) return;
     await api.del(`/schedules/${id}`);
     load();
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold">Scan Schedules</h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">Continuous scanning — daily, weekly, monthly, or custom cron</p>
+          <h1 className="text-xl font-bold tracking-tight text-[var(--text)]">
+            Automated Scan Schedules
+          </h1>
+          <p className="text-xs text-[var(--text-muted)] mt-1">
+            Configure periodic assessments, cron routines, and automatic re-scans upon remediation
+          </p>
         </div>
-        <Button onClick={() => setShowForm((s) => !s)} className="flex items-center gap-2">
-          <Plus size={14} /> New Schedule
+        <Button
+          onClick={() => setShowForm((s) => !s)}
+          variant={showForm ? "secondary" : "primary"}
+          size="sm"
+          icon={Plus}
+        >
+          {showForm ? "Cancel" : "New Schedule"}
         </Button>
       </div>
 
       {showForm && (
-        <Card>
-          <form onSubmit={create} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+        <Card
+          header="Configure Recurring Scan Schedule"
+          subtitle="APScheduler in-process background job registration"
+        >
+          <form onSubmit={create} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-[var(--text-muted)] block mb-1">Name</label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} required className="w-full" />
+                <label className="text-xs font-semibold text-[var(--text)] block mb-1.5">
+                  Schedule Name
+                </label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  placeholder="e.g. Weekly Perimeter Scan"
+                  className="w-full text-xs"
+                />
               </div>
               <div>
-                <label className="text-xs text-[var(--text-muted)] block mb-1">Scanner</label>
-                <Select value={scannerType} onChange={(e) => setScannerType(e.target.value)} className="w-full">
-                  <option value="nmap">Nmap</option>
-                  <option value="openvas">OpenVAS</option>
-                  <option value="nessus">Nessus</option>
-                  <option value="nuclei">Nuclei</option>
+                <label className="text-xs font-semibold text-[var(--text)] block mb-1.5">
+                  Scanner Engine
+                </label>
+                <Select
+                  value={scannerType}
+                  onChange={(e) => setScannerType(e.target.value)}
+                  className="w-full text-xs font-mono-data"
+                >
+                  <option value="nmap">Nmap (Network & NSE)</option>
+                  <option value="nuclei">Nuclei (Web Templates)</option>
+                  <option value="openvas">OpenVAS (GMP Daemon)</option>
+                  <option value="nessus">Nessus (REST Client)</option>
                   <option value="custom">Custom Script</option>
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-[var(--text-muted)] block mb-1">Target</label>
-                <Input value={target} onChange={(e) => setTarget(e.target.value)} required className="w-full" placeholder="10.0.0.0/24" />
+                <label className="text-xs font-semibold text-[var(--text)] block mb-1.5">
+                  Target (IP, CIDR, or Hostname)
+                </label>
+                <Input
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  required
+                  className="w-full font-mono-data text-xs"
+                  placeholder="10.0.0.0/24"
+                />
               </div>
               <div>
-                <label className="text-xs text-[var(--text-muted)] block mb-1">Frequency</label>
-                <Select value={frequency} onChange={(e) => setFrequency(e.target.value)} className="w-full">
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="custom_cron">Custom (cron)</option>
+                <label className="text-xs font-semibold text-[var(--text)] block mb-1.5">
+                  Recurrence Frequency
+                </label>
+                <Select
+                  value={frequency}
+                  onChange={(e) => setFrequency(e.target.value)}
+                  className="w-full text-xs font-mono-data"
+                >
+                  <option value="daily">Daily Interval</option>
+                  <option value="weekly">Weekly Routine</option>
+                  <option value="monthly">Monthly Cycle</option>
+                  <option value="custom_cron">Custom Cron Expression</option>
                 </Select>
               </div>
             </div>
+
             {frequency === "custom_cron" && (
               <div>
-                <label className="text-xs text-[var(--text-muted)] block mb-1">Cron Expression</label>
-                <Input value={cron} onChange={(e) => setCron(e.target.value)} placeholder="0 2 * * 1" className="w-full font-mono-data" />
+                <label className="text-xs font-semibold text-[var(--text)] block mb-1.5">
+                  Cron Expression (5-field UTC)
+                </label>
+                <Input
+                  value={cron}
+                  onChange={(e) => setCron(e.target.value)}
+                  placeholder="0 2 * * 1"
+                  className="w-full font-mono-data text-xs"
+                />
               </div>
             )}
-            <label className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
-              <input type="checkbox" checked={rescanOnRemediation} onChange={(e) => setRescanOnRemediation(e.target.checked)} />
-              Automatically re-scan when a finding from this schedule is marked remediated
-            </label>
-            <Button type="submit" disabled={busy}>{busy ? "Saving..." : "Create Schedule"}</Button>
+
+            <div className="p-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-[5px] flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="rescan"
+                checked={rescanOnRemediation}
+                onChange={(e) => setRescanOnRemediation(e.target.checked)}
+                className="w-4 h-4 accent-[var(--brand)] rounded cursor-pointer"
+              />
+              <label htmlFor="rescan" className="text-xs text-[var(--text)] cursor-pointer select-none">
+                <strong>Auto-Rescan on Remediation:</strong> Automatically trigger a verification scan whenever a correlated finding is marked remediated.
+              </label>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={busy} variant="primary" size="sm">
+                {busy ? "Registering..." : "Activate Schedule"}
+              </Button>
+            </div>
           </form>
         </Card>
       )}
 
       {schedules.length === 0 ? (
-        <Card><EmptyState title="No schedules configured" hint="Set up recurring scans so your inventory stays current automatically." /></Card>
+        <Card>
+          <EmptyState
+            title="No automated schedules active"
+            hint="Set up periodic scans to continuously monitor changes in your attack surface."
+          />
+        </Card>
       ) : (
         <Card className="p-0 overflow-hidden">
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[800px]">
-            <thead>
-              <tr className="border-b border-[var(--border)]">
-                {["Name", "Scanner", "Target", "Frequency", "Last Run", "Status", ""].map((h) => (
-                  <th key={h} className="text-left text-xs text-[var(--text-dim)] font-medium px-4 py-3">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {schedules.map((s) => (
-                <tr key={s.id} className="border-b border-[var(--border-soft)] last:border-0">
-                  <td className="px-4 py-3">{s.name}</td>
-                  <td className="px-4 py-3 uppercase text-xs font-mono-data text-[var(--text-muted)]">{s.scanner_type}</td>
-                  <td className="px-4 py-3 font-mono-data text-xs">{s.target}</td>
-                  <td className="px-4 py-3 capitalize">{s.frequency.replace("_", " ")}</td>
-                  <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{s.last_run ? new Date(s.last_run).toLocaleString() : "Never"}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded ${s.enabled ? "bg-[var(--brand-dim)] text-[var(--brand)]" : "bg-[var(--surface-2)] text-[var(--text-dim)]"}`}>
-                      {s.enabled ? "Enabled" : "Disabled"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => toggle(s.id)} className="text-[var(--text-muted)] hover:text-[var(--brand)]"><Power size={14} /></button>
-                      <button onClick={() => remove(s.id)} className="text-[var(--text-muted)] hover:text-[var(--critical)]"><Trash2 size={14} /></button>
-                    </div>
-                  </td>
+            <table className="w-full text-sm min-w-[800px]">
+              <thead>
+                <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]/40 font-mono-data uppercase text-xs text-[var(--text-dim)]">
+                  <th className="text-left px-4 py-3">Schedule Name</th>
+                  <th className="text-left px-4 py-3">Scanner</th>
+                  <th className="text-left px-4 py-3">Target Scope</th>
+                  <th className="text-left px-4 py-3">Frequency</th>
+                  <th className="text-left px-4 py-3">Last Executed</th>
+                  <th className="text-left px-4 py-3">State</th>
+                  <th className="text-right px-4 py-3">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-soft)]">
+                {schedules.map((s) => (
+                  <tr key={s.id} className="hover:bg-[var(--surface-2)]/30 transition-colors">
+                    <td className="px-4 py-3 font-semibold text-[var(--text)]">{s.name}</td>
+                    <td className="px-4 py-3 uppercase text-xs font-mono-data text-[var(--brand)]">
+                      {s.scanner_type}
+                    </td>
+                    <td className="px-4 py-3 font-mono-data text-xs text-[var(--text-muted)]">
+                      {s.target}
+                    </td>
+                    <td className="px-4 py-3 text-xs capitalize font-mono-data text-[var(--text)]">
+                      {s.frequency.replace("_", " ")}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-[var(--text-dim)] font-mono-data">
+                      {s.last_run ? new Date(s.last_run).toLocaleString() : "Never"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-mono-data font-bold uppercase ${
+                          s.enabled
+                            ? "bg-[var(--brand-dim)] text-[var(--brand)]"
+                            : "bg-[var(--surface-3)] text-[var(--text-dim)]"
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            s.enabled ? "bg-[var(--brand)]" : "bg-[var(--text-dim)]"
+                          }`}
+                        />
+                        {s.enabled ? "Active" : "Paused"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => toggle(s.id)}
+                          className={`p-1.5 rounded transition-colors cursor-pointer ${
+                            s.enabled
+                              ? "text-[var(--text-dim)] hover:text-[var(--medium)] hover:bg-[var(--surface-2)]"
+                              : "text-[var(--text-dim)] hover:text-[var(--brand)] hover:bg-[var(--surface-2)]"
+                          }`}
+                          title={s.enabled ? "Pause Schedule" : "Enable Schedule"}
+                        >
+                          <Power size={15} />
+                        </button>
+                        <button
+                          onClick={() => remove(s.id)}
+                          className="p-1.5 text-[var(--text-dim)] hover:text-[var(--critical)] hover:bg-[var(--critical-dim)] rounded transition-colors cursor-pointer"
+                          title="Delete Schedule"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </Card>
       )}

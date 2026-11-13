@@ -15,12 +15,43 @@ services:
       # pointing this at a real Postgres service - no code changes needed,
       # every query in this platform goes through SQLAlchemy.
       # - VULN_DATABASE_URL=postgresql://vuln:vuln@postgres:5432/vuln_platform
+      - RAG_RETRIEVAL_BACKEND=${RAG_RETRIEVAL_BACKEND:-auto}
+      - RAG_VECTOR_CANDIDATE_K=${RAG_VECTOR_CANDIDATE_K:-50}
+      - RAG_LEXICAL_CANDIDATE_K=${RAG_LEXICAL_CANDIDATE_K:-50}
+      - RAG_FUSION_K=${RAG_FUSION_K:-50}
+      - RAG_RERANK_K=${RAG_RERANK_K:-20}
+      - RAG_RERANK_ENABLED=${RAG_RERANK_ENABLED:-0}
+      - RAG_INDEXING_BATCH_SIZE=${RAG_INDEXING_BATCH_SIZE:-64}
+      - RAG_FULL_REINDEX_ENABLED=${RAG_FULL_REINDEX_ENABLED:-0}
 
       - VULN_JWT_SECRET=${VULN_JWT_SECRET:-change-me-in-production}
 
-      # RAG assistant mode: template (default, offline) | ollama | openrouter | online
-      - VULN_RAG_MODE=${VULN_RAG_MODE:-template}
+      # Canonical RAG provider settings
+      # Leave blank when unset so configured numbered Groq keys can select
+      # Groq; explicit template mode remains available for air-gapped use.
+      - RAG_GENERATION_PROVIDER=${RAG_GENERATION_PROVIDER:-}
+      - RAG_GENERATION_BASE_URL=${RAG_GENERATION_BASE_URL:-}
+      - RAG_GENERATION_API_KEY=${RAG_GENERATION_API_KEY:-}
+      - RAG_GENERATION_MODEL=${RAG_GENERATION_MODEL:-openai/gpt-oss-120b}
+      - GROQ_BASE_URL=${GROQ_BASE_URL:-https://api.groq.com/openai/v1}
+      - GROQ_MODEL=${GROQ_MODEL:-openai/gpt-oss-120b}
+      - GROQ_API_KEYS=${GROQ_API_KEYS:-}
+      - GROQ_API_KEY_1=${GROQ_API_KEY_1:-}
+      - GROQ_API_KEY_2=${GROQ_API_KEY_2:-}
+      - GROQ_API_KEY_3=${GROQ_API_KEY_3:-}
+      - RAG_LLM_TIMEOUT_SECONDS=${RAG_LLM_TIMEOUT_SECONDS:-30}
+      - RAG_LLM_MAX_RETRIES=${RAG_LLM_MAX_RETRIES:-2}
+      - RAG_PRELOAD_EMBEDDINGS=${RAG_PRELOAD_EMBEDDINGS:-true}
+      - RAG_NVD_LOOKUP_TIMEOUT_SECONDS=${RAG_NVD_LOOKUP_TIMEOUT_SECONDS:-3}
+      - RAG_EMBEDDING_MODEL=${RAG_EMBEDDING_MODEL:-BAAI/bge-base-en-v1.5}
+      - RAG_EMBEDDING_REVISION=${RAG_EMBEDDING_REVISION:-}
+      - RAG_ALLOW_MODEL_DOWNLOAD=${RAG_ALLOW_MODEL_DOWNLOAD:-0}
+      - RAG_JEV_MODE=${RAG_JEV_MODE:-disabled}
+      - RAG_JEV_MODEL=${RAG_JEV_MODEL:-jev-latest}
+      # Deprecated aliases retained for existing deployments
+      - VULN_RAG_MODE=${VULN_RAG_MODE:-}
       - VULN_NVD_URL=${VULN_NVD_URL:-https://services.nvd.nist.gov/rest/json/cves/2.0}
+      - NVD_API_KEY=${NVD_API_KEY:-}
       - VULN_OLLAMA_BASE_URL=${VULN_OLLAMA_BASE_URL:-http://ollama:11434}
       - VULN_OLLAMA_MODEL=${VULN_OLLAMA_MODEL:-llama3}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
@@ -46,6 +77,42 @@ services:
       - NET_RAW
       - NET_ADMIN
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m workers.run
+    profiles: ["production"]
+    environment:
+      - VULN_DATABASE_URL=${VULN_DATABASE_URL:-postgresql://vuln:vuln@postgres:5432/vuln_platform}
+      - VULN_JWT_SECRET=${VULN_JWT_SECRET:-change-me-in-production}
+      - JOB_WORKER_ENABLED=${JOB_WORKER_ENABLED:-1}
+      - JOB_WORKER_ID=${JOB_WORKER_ID:-}
+      - JOB_POLL_INTERVAL_SECONDS=${JOB_POLL_INTERVAL_SECONDS:-2}
+      - JOB_LEASE_SECONDS=${JOB_LEASE_SECONDS:-300}
+      - JOB_MAX_CONCURRENCY=${JOB_MAX_CONCURRENCY:-1}
+      - RAG_EMBEDDING_MODEL=${RAG_EMBEDDING_MODEL:-BAAI/bge-base-en-v1.5}
+      - RAG_EMBEDDING_REVISION=${RAG_EMBEDDING_REVISION:-}
+      - RAG_ALLOW_MODEL_DOWNLOAD=${RAG_ALLOW_MODEL_DOWNLOAD:-0}
+      - RAG_INDEXING_BATCH_SIZE=${RAG_INDEXING_BATCH_SIZE:-64}
+      - RAG_FULL_REINDEX_ENABLED=${RAG_FULL_REINDEX_ENABLED:-0}
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  scheduler-dispatcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m scheduling.dispatcher
+    profiles: ["production"]
+    environment:
+      - VULN_DATABASE_URL=${VULN_DATABASE_URL:-postgresql://vuln:vuln@postgres:5432/vuln_platform}
+      - SCHEDULER_POLL_INTERVAL_SECONDS=${SCHEDULER_POLL_INTERVAL_SECONDS:-30}
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
   # Optional: a local Ollama service for air-gapped LLM-powered RAG
   # generation. Not started by default - run with `--profile llm` and pull
   # a model once (`docker compose exec ollama ollama pull llama3`).
@@ -64,7 +131,7 @@ services:
   # postgresql://vuln:vuln@postgres:5432/vuln_platform and restart
   # vuln-platform. No application code changes needed either way.
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: vuln-platform-postgres
     profiles: ["postgres"]
     environment:
@@ -75,6 +142,23 @@ services:
       - postgres-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
+  prometheus:
+    image: prom/prometheus:v3.7.1
+    profiles: ["observability"]
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - vuln-platform
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.75
+    profiles: ["observability"]
+    ports:
+      - "16686:16686"
+      - "4318:4318"
 
 volumes:
   vuln-data:

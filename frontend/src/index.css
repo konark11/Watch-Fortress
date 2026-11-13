@@ -1,44 +1,66 @@
 @import "tailwindcss";
 
 /*
-  Design direction: dark, near-black "ops console" look (in the spirit of
-  modern SaaS dashboards like Linear/Vercel), with a punchy lime-green
-  accent reserved for primary actions, brand elements, and the "good/
-  positive" signal - distinct from the severity scale, which stays on
-  its own red/orange/amber/blue track so a critical finding never gets
-  confused with a brand-colored UI element.
+  Watch Fortress - Precision Instrument Design System
+  Calm, precise, considered dark theme inspired by Linear and high-end technical instruments.
+  - Warm neutral graphite base (#121316 / #18191d)
+  - 1px hairline borders at low opacity, no glows, no outer rings
+  - Restrained single accent (muted sand/amber #c49547)
+  - Desaturated severity indicators (dots, counts, hairline left bars)
+  - Humanist/Grotesk UI sans with monospace reserved strictly for data
+  - Consistent 5px corner radius across all elements
 */
 :root {
-  --bg: #0b0c0f;
-  --surface: #141519;
-  --surface-2: #1a1c21;
-  --surface-3: #212329;
-  --border: #26282f;
-  --border-soft: #1d1f25;
-  --text: #f2f3f5;
-  --text-muted: #9a9ca6;
-  --text-dim: #66676f;
+  --bg: #121316;
+  --bg-subtle: #16171a;
+  --surface: #18191d;
+  --surface-2: #202227;
+  --surface-3: #272a31;
+  --surface-hover: #23252a;
+  --surface-active: #2b2e35;
+  
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-accent: #c49547;
 
-  --brand: #c8ff4d;
-  --brand-dim: rgba(200, 255, 77, 0.12);
+  /* Typography tiers */
+  --text: #eceae5;
+  --text-secondary: #9c9b96;
+  --text-tertiary: #686763;
+  --text-muted: #9c9b96;
+  --text-dim: #686763;
 
-  --critical: #fb3f5e;
-  --critical-dim: rgba(251, 63, 94, 0.14);
-  --high: #fb923c;
-  --high-dim: rgba(251, 146, 60, 0.14);
-  --medium: #fbbf24;
-  --medium-dim: rgba(251, 191, 36, 0.14);
-  --low: #38bdf8;
-  --low-dim: rgba(56, 189, 248, 0.14);
-  --info: #71727a;
-  --info-dim: rgba(113, 114, 122, 0.14);
+  /* Restrained single accent: Muted Sand / Amber */
+  --accent: #c49547;
+  --accent-hover: #b38439;
+  --accent-subtle: rgba(196, 149, 71, 0.12);
+  --accent-text: #121316;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 1px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+  /* Backward compatible brand alias pointing strictly to accent */
+  --brand: #c49547;
+  --brand-hover: #b38439;
+  --brand-light: #d4a359;
+  --brand-dim: rgba(196, 149, 71, 0.12);
 
-  --sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  /* Desaturated severity indicators - used solely for real finding states */
+  --critical: #c85a54;
+  --critical-dim: rgba(200, 90, 84, 0.12);
+  --high: #d97736;
+  --high-dim: rgba(217, 119, 54, 0.12);
+  --medium: #c99738;
+  --medium-dim: rgba(201, 151, 56, 0.12);
+  --low: #5a949b;
+  --low-dim: rgba(90, 148, 155, 0.12);
+  --info: #787f8a;
+  --info-dim: rgba(120, 127, 138, 0.12);
+
+  --radius: 5px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", Arial, sans-serif;
+  --mono: "SF Mono", "JetBrains Mono", "Cascadia Code", Consolas, monospace;
 
   color-scheme: dark;
   color: var(--text);
@@ -46,33 +68,55 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html, body, #root { height: 100%; }
+html {
+  font-size: 18px; /* Elevated typography baseline by 2 points (+2px from 16px) */
+  height: 100%;
+}
+
+body, #root {
+  height: 100%;
+}
 
 body {
   margin: 0;
   font-family: var(--sans);
+  font-size: 0.888rem;
   background: var(--bg);
-  background-image:
-    radial-gradient(ellipse 70% 45% at 15% -10%, rgba(200, 255, 77, 0.06), transparent),
-    radial-gradient(ellipse 55% 35% at 100% 0%, rgba(251, 63, 94, 0.04), transparent),
-    radial-gradient(ellipse 50% 40% at 90% 100%, rgba(56, 189, 248, 0.04), transparent);
-  background-attachment: fixed;
+  color: var(--text);
+  letter-spacing: -0.011em;
 }
 
-::selection { background: var(--brand-dim); color: var(--text); }
+::selection {
+  background: var(--accent);
+  color: var(--accent-text);
+}
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
-::-webkit-scrollbar-thumb:hover { background: var(--surface-3); }
+/* Custom Minimal Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
 
 :focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -83,10 +127,22 @@ body {
   }
 }
 
-.sev-critical { color: var(--critical); background: var(--critical-dim); }
-.sev-high { color: var(--high); background: var(--high-dim); }
-.sev-medium { color: var(--medium); background: var(--medium-dim); }
-.sev-low { color: var(--low); background: var(--low-dim); }
-.sev-info { color: var(--info); background: var(--info-dim); }
+/* Data Monospace: only for numbers, IPs, CIDRs, hashes, ports, CVEs */
+.font-mono-data {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
 
-.font-mono-data { font-family: var(--mono); }
+/* Clean surface panel */
+.surface-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* Severity dot indicators */
+.sev-dot-critical { background-color: var(--critical); }
+.sev-dot-high { background-color: var(--high); }
+.sev-dot-medium { background-color: var(--medium); }
+.sev-dot-low { background-color: var(--low); }
+.sev-dot-info { background-color: var(--info); }

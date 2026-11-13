@@ -1,265 +1,243 @@
 import { useEffect, useRef, useState } from "react";
-import { MessageSquare, Plus, Send, Sparkles, Trash2, Wifi, WifiOff } from "lucide-react";
+import { ArrowRight, BookOpen, Download, MessageSquare, Plus, Send, Trash2, WifiOff } from "lucide-react";
 import { api } from "../api/client";
-import type { AssistantResponse } from "../types";
+import type { AssistantStatus, ChatMessage, RAGStatus } from "../types";
 import { Card, Button } from "../components/ui";
-import { useAuth } from "../context/AuthContext";
 
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-  sources?: { source: string; title: string; relevance: number }[];
-}
-
-interface SavedChat {
+interface Conversation {
   id: string;
   title: string;
-  messages: Message[];
-  updatedAt: number;
+  status: "active" | "archived" | "deleted";
+  expires_at: string;
+}
+interface StoredMessage extends ChatMessage {
+  id: string;
+  sequence: number;
+  generation_metadata?: { degradation?: { reason?: string } | null };
+}
+interface Memory {
+  id: string;
+  memory_type: string;
+  content: string;
+  scope: "user" | "conversation";
+  expires_at: string;
 }
 
-function renderMessage(content: string) {
-  return content.split(/(\*\*[^*]+\*\*)/g).map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={index}>{part.slice(2, -2)}</strong>;
-    }
-    return <span key={index}>{part}</span>;
-  });
-}
-
-const MAX_SAVED_CHATS = 5;
-const CHAT_STORAGE_PREFIX = "watch-fortress-assistant-chats:";
-
-const EXAMPLE_QUESTIONS = [
-  "Why is CVE-2024-3400 dangerous?",
-  "How do I fix CVE-2017-5638?",
-  "Show all critical findings",
-  "Which hosts have privilege escalation risks?",
-  "What is SQL injection?",
+const SUGGESTIONS = [
+  "Explain CVE-2023-48795 (Terrapin) impact and provide verified remediation steps for SSH servers.",
+  "Review recent auth.login_failed audit logs for brute force signatures and IP correlation.",
+  "Which cataloged CISA KEV vulnerabilities are present in our environment?",
+  "What are the recommended configuration directives to harden OpenSSH?",
 ];
 
 export default function AssistantPage() {
-  const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [savedChats, setSavedChats] = useState<SavedChat[]>([]);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<StoredMessage[]>([]);
+  const [memories, setMemories] = useState<Memory[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [ragMode, setRagMode] = useState<{ mode: string; provider: string } | null>(null);
-  const [statusError, setStatusError] = useState<string | null>(null);
-  const loadedChatsRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [ragMode, setRagMode] = useState<RAGStatus | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    const storageKey = `${CHAT_STORAGE_PREFIX}${user.id}`;
-    try {
-      const raw = localStorage.getItem(storageKey);
-      const chats: SavedChat[] = raw ? JSON.parse(raw) : [];
-      const validChats = Array.isArray(chats)
-        ? chats.filter((chat) => chat && typeof chat.id === "string" && Array.isArray(chat.messages)).slice(0, MAX_SAVED_CHATS)
-        : [];
-      setSavedChats(validChats);
-      if (validChats[0]) {
-        setActiveChatId(validChats[0].id);
-        setMessages(validChats[0].messages);
-      }
-    } catch {
-      setSavedChats([]);
-    } finally {
-      loadedChatsRef.current = true;
-    }
-  }, [user]);
+  async function loadMemories() {
+    const result = await api.get<{ memories: Memory[] }>("/assistant/memories");
+    setMemories(Array.isArray(result?.memories) ? result.memories : []);
+  }
+
+  async function selectConversation(id: string) {
+    setActiveId(id);
+    const result = await api.get<{ messages: StoredMessage[] }>(`/assistant/conversations/${id}`);
+    setMessages(Array.isArray(result?.messages) ? result.messages : []);
+  }
+
+  async function loadConversations() {
+    const result = await api.get<{ conversations: Conversation[] }>("/assistant/conversations");
+    const nextConversations = Array.isArray(result?.conversations) ? result.conversations : [];
+    setConversations(nextConversations);
+    if (nextConversations[0]) await selectConversation(nextConversations[0].id);
+  }
 
   useEffect(() => {
-    api
-      .get<{ mode: string; provider: string }>("/assistant/status")
-      .then(setRagMode)
-      .catch(() => setStatusError("Please try again later."));
+    Promise.allSettled([
+      loadConversations().catch((err: Error) => {
+        setError(err.message || "Assistant storage is unavailable.");
+      }),
+      loadMemories().catch((err: Error) => {
+        console.warn("Failed to load memories:", err);
+        setError((current) => current || "Assistant memories are unavailable.");
+      }),
+      api.get<AssistantStatus>("/assistant/status")
+        .then((result) => setRagMode(result && typeof result === "object" ? result : null))
+        .catch((err: Error) => console.warn("Failed to load assistant status:", err)),
+    ]).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+  }, [messages, busy]);
 
-  useEffect(() => {
-    if (!user || !loadedChatsRef.current || !activeChatId || messages.length === 0) return;
-    setSavedChats((current) => {
-      const existing = current.find((chat) => chat.id === activeChatId);
-      const firstQuestion = messages.find((message) => message.role === "user")?.content || "New conversation";
-      const updated: SavedChat = {
-        id: activeChatId,
-        title: existing?.title || firstQuestion.slice(0, 60),
-        messages,
-        updatedAt: Date.now(),
-      };
-      const next = [updated, ...current.filter((chat) => chat.id !== activeChatId)].slice(0, MAX_SAVED_CHATS);
-      try {
-        localStorage.setItem(`${CHAT_STORAGE_PREFIX}${user.id}`, JSON.stringify(next));
-      } catch {
-        // Keep the active chat usable if browser storage is unavailable or full.
-      }
-      return next;
-    });
-  }, [messages, activeChatId, user]);
-
-  function startNewChat() {
-    setActiveChatId(null);
-    setMessages([]);
-    setInput("");
-  }
-
-  function openChat(chat: SavedChat) {
-    setActiveChatId(chat.id);
-    setMessages(chat.messages);
-    setInput("");
-  }
-
-  function deleteChat(chatId: string) {
-    setSavedChats((current) => {
-      const next = current.filter((chat) => chat.id !== chatId);
-      if (user) {
-        try {
-          localStorage.setItem(`${CHAT_STORAGE_PREFIX}${user.id}`, JSON.stringify(next));
-        } catch {
-          // The in-memory list still reflects the deletion for this session.
-        }
-      }
-      return next;
-    });
-    if (activeChatId === chatId) {
-      setActiveChatId(null);
-      setMessages([]);
-      setInput("");
+  async function newConversation() {
+    try {
+      const created = await api.post<Conversation>("/assistant/conversations", { title: "New conversation" });
+      setConversations((items) => [created, ...items]);
+      await selectConversation(created.id);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Conversation could not be created.");
     }
   }
 
-  async function send(question?: string) {
-    const q = question ?? input;
-    if (!q.trim()) return;
-    if (!activeChatId) setActiveChatId(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    setMessages((m) => [...m, { role: "user", content: q }]);
-    setInput("");
-    setBusy(true);
+  async function removeConversation(id: string) {
     try {
-      const history = messages.slice(-8).map(({ role, content }) => ({ role, content }));
-      const resp = await api.post<AssistantResponse>("/assistant/ask", { question: q, history });
-      setMessages((m) => [...m, { role: "assistant", content: resp.answer, sources: resp.sources }]);
-    } catch (err: any) {
-      setMessages((m) => [...m, { role: "assistant", content: `I couldn't complete that. ${err.message || "Please try again."}` }]);
+      await api.del(`/assistant/conversations/${id}`);
+      const remaining = conversations.filter((conversation) => conversation.id !== id);
+      setConversations(remaining);
+      if (activeId === id) {
+        setActiveId(null);
+        setMessages([]);
+        if (remaining[0]) await selectConversation(remaining[0].id);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Conversation could not be deleted.");
+    }
+  }
+
+  async function renameConversation(conversation: Conversation) {
+    const title = window.prompt("Conversation title", conversation.title);
+    if (!title || title === conversation.title) return;
+    try {
+      const updated = await api.patch<Conversation>(`/assistant/conversations/${conversation.id}`, { title });
+      setConversations((items) => items.map((item) => item.id === updated.id ? updated : item));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Conversation could not be renamed.");
+    }
+  }
+
+  async function send(text?: string) {
+    const question = (text || input).trim();
+    if (!question || busy) return;
+    let conversationId = activeId;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 90000);
+    setBusy(true);
+    setError(null);
+    try {
+      if (!conversationId) {
+        const created = await api.post<Conversation>("/assistant/conversations", { title: question.slice(0, 60) });
+        conversationId = created.id;
+        setActiveId(conversationId);
+        setConversations((items) => [created, ...items]);
+      }
+      const response = await api.post<{ reply: string; sources?: ChatMessage["sources"]; message_id: string }>(
+        "/assistant/ask", { question, conversation_id: conversationId }, controller.signal,
+      );
+      const refreshed = await api.get<{ messages: StoredMessage[] }>(`/assistant/conversations/${conversationId}`);
+      setMessages(refreshed.messages);
+      setInput("");
+      if (response.reply === undefined) setError("Assistant returned no persisted reply.");
+    } catch (err) {
+      setError(
+        err instanceof DOMException && err.name === "AbortError"
+          ? "Not persisted: assistant request timed out. Check the backend RAG status and try again."
+          : err instanceof Error ? err.message : "Assistant request failed.",
+      );
     } finally {
+      window.clearTimeout(timeout);
       setBusy(false);
     }
   }
 
-  return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <Sparkles size={18} className="text-[var(--brand)]" /> AI Security Assistant
-          </h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">Ask about security issues, fixes, or your scan results.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {ragMode && (
-            <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-1.5">
-              {ragMode.mode === "template" ? <WifiOff size={12} /> : <Wifi size={12} className="text-[var(--brand)]" />}
-              Ready
+  async function addMemory() {
+    const content = window.prompt("Save an explicit memory (it will be included in future assistant context).");
+    if (!content?.trim()) return;
+    try {
+      await api.post("/assistant/memories", { memory_type: "preference", content: content.trim(), scope: "user" });
+      await loadMemories();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Memory could not be saved.");
+    }
+  }
+
+  async function exportData() {
+    try {
+      const data = await api.get<Record<string, unknown>>("/assistant/export");
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "watch-fortress-assistant-export.json";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Export failed.");
+    }
+  }
+
+  function renderMessage(message: StoredMessage) {
+    const sources = Array.isArray(message.sources) ? message.sources : [];
+    return (
+      <div key={message.id} className={`flex gap-2.5 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+        <div className={`max-w-[85%] rounded-[5px] p-3 text-xs leading-relaxed ${
+          message.role === "user" ? "bg-[var(--surface-2)] border border-[var(--border-strong)]" : "border border-[var(--border)]"
+        }`}>
+          <div className="whitespace-pre-wrap">{message.content}</div>
+          {sources.length > 0 && (
+            <div className="mt-3 pt-2 border-t border-[var(--border)]">
+              <div className="text-xs text-[var(--text-tertiary)] mb-1.5 flex items-center gap-1"><BookOpen size={11} /> Evidence sources</div>
+              <div className="flex flex-wrap gap-1">{sources.map((source, idx) => (
+                <span key={source.id || `${source.source}-${source.title}-${idx}`} className="bg-[var(--surface-2)] border border-[var(--border)] rounded px-1.5 py-0.5 text-xs">
+                  {source.source}: {source.title}
+                </span>
+              ))}</div>
             </div>
           )}
-          <Button onClick={startNewChat} disabled={busy}>
-            <Plus size={15} /> New chat
-          </Button>
         </div>
-        {statusError && <div className="text-xs text-red-400">The assistant status is unavailable: {statusError}</div>}
       </div>
+    );
+  }
 
-      <Card className="flex-1 flex flex-col overflow-hidden p-0">
-        {savedChats.length > 0 && (
-          <div className="border-b border-[var(--border)] px-4 py-2 flex items-center gap-2 overflow-x-auto">
-            <span className="text-[10px] uppercase tracking-wide text-[var(--text-dim)] shrink-0">Recent chats</span>
-            {savedChats.map((chat) => (
-              <div
-                key={chat.id}
-                className={`flex items-center gap-1 max-w-60 rounded-lg border transition-colors ${
-                  chat.id === activeChatId
-                    ? "border-[var(--brand)] bg-[var(--brand-dim)]"
-                    : "border-[var(--border)]"
-                }`}
-              >
-                <button
-                  onClick={() => openChat(chat)}
-                  title={chat.title}
-                  className="flex items-center gap-1.5 min-w-0 text-xs rounded-l-lg px-2.5 py-1.5 text-[var(--text-muted)] hover:text-[var(--text)]"
-                >
-                  <MessageSquare size={12} className="shrink-0" />
-                  <span className="truncate">{chat.title}</span>
-                </button>
-                <button
-                  onClick={() => deleteChat(chat.id)}
-                  title={`Delete chat: ${chat.title}`}
-                  aria-label={`Delete chat: ${chat.title}`}
-                  className="p-1.5 mr-0.5 rounded text-[var(--text-dim)] hover:text-[var(--critical)] hover:bg-[var(--surface-2)]"
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-4">
-          {messages.length === 0 && (
-            <div className="text-center py-10">
-              <div className="text-sm text-[var(--text-muted)] mb-4">Try asking:</div>
-              <div className="flex flex-wrap gap-2 justify-center max-w-lg mx-auto">
-                {EXAMPLE_QUESTIONS.map((q) => (
-                  <button
-                    key={q}
-                    onClick={() => send(q)}
-                    className="text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded-full px-3 py-1.5 text-[var(--text-muted)] hover:border-[var(--brand)] hover:text-[var(--text)] transition-colors"
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`max-w-[75%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap ${
-                  m.role === "user" ? "bg-[var(--brand-dim)] text-[var(--text)]" : "bg-[var(--surface-2)] text-[var(--text)]"
-                }`}
-              >
-                {renderMessage(m.content)}
-                {m.sources && m.sources.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-[var(--border-soft)] flex flex-wrap gap-1.5">
-                    {m.sources.map((s, j) => (
-                      <span key={j} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[var(--text-dim)]">
-                        {s.source}: {s.title}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          {busy && <div className="text-xs text-[var(--text-dim)]">Looking into that...</div>}
+  return (
+    <div className="flex flex-col h-[calc(100vh-6rem)] space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div><h1 className="text-base font-semibold text-[var(--text)]">Remediation assistant</h1>
+          <p className="text-xs text-[var(--text-secondary)]">Server-persisted conversations and explicit user memory.</p></div>
+        <div className="flex items-center gap-2">
+          {ragMode?.generation?.mode === "template" && <span className="text-xs text-[var(--text-secondary)] flex gap-1"><WifiOff size={12} /> Offline template</span>}
+          <Button size="sm" variant="secondary" icon={Plus} onClick={newConversation}>New session</Button>
+          <Button size="sm" variant="secondary" icon={Download} onClick={exportData}>Export</Button>
         </div>
-
-        <div className="border-t border-[var(--border)] p-4 flex gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Ask about a CVE, vulnerability type, or your scan results..."
-            className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--brand)]"
-          />
-          <Button onClick={() => send()} disabled={busy}>
-            <Send size={16} />
-          </Button>
+      </div>
+      {error && <div role="alert" className="text-xs text-[var(--critical)] border border-[var(--critical)] rounded p-2">{error}</div>}
+      {loading && <div className="text-xs text-[var(--text-secondary)]">Loading assistant data...</div>}
+      <Card className="flex-1 flex flex-col overflow-hidden p-0 border-[var(--border)]">
+        <div className="bg-[var(--surface-2)] border-b border-[var(--border)] px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto shrink-0">
+          {conversations.map((conversation) => <div key={conversation.id} className="flex items-center border border-[var(--border)] rounded text-xs shrink-0">
+            <button type="button" className="px-2 py-1 max-w-[160px] truncate" onClick={() => selectConversation(conversation.id)} onDoubleClick={() => renameConversation(conversation)}>
+              <MessageSquare size={11} className="inline mr-1" />{conversation.title}
+            </button>
+            <button type="button" className="p-1 text-[var(--text-tertiary)] hover:text-[var(--critical)]" onClick={() => removeConversation(conversation.id)} title="Delete conversation"><Trash2 size={11} /></button>
+          </div>)}
         </div>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.length === 0 && <div className="max-w-xl mx-auto py-10 text-center space-y-4">
+            <h3 className="text-sm font-medium">Remediation Assistant</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">{SUGGESTIONS.map((suggestion) => <button key={suggestion} type="button" onClick={() => send(suggestion)} className="p-2.5 rounded border border-[var(--border)] text-xs text-left"><ArrowRight size={12} className="inline mr-1" />{suggestion}</button>)}</div>
+          </div>}
+          {messages.map(renderMessage)}
+          {busy && <div className="text-xs text-[var(--text-secondary)]">Retrieving knowledge and persisting response...</div>}
+        </div>
+        <div className="p-3 bg-[var(--surface)] border-t border-[var(--border)]">
+          <form onSubmit={(event) => { event.preventDefault(); send(); }} className="flex gap-2">
+            <input aria-label="Ask security assistant" value={input} onChange={(event) => setInput(event.target.value)} disabled={busy} className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded px-3 py-1.5 text-xs" placeholder="Ask about CVEs or remediation..." />
+            <Button type="submit" variant="primary" disabled={busy || !input.trim()} icon={Send}>Ask</Button>
+          </form>
+        </div>
+      </Card>
+      <Card className="shrink-0 p-3">
+        <div className="flex items-center justify-between"><h2 className="text-xs font-semibold">Explicit memory</h2><Button size="sm" variant="secondary" onClick={addMemory}>Add</Button></div>
+        {memories.length === 0 ? <p className="text-xs text-[var(--text-secondary)] mt-2">No stored memories.</p> : memories.map((memory) => <div key={memory.id} className="flex items-center justify-between gap-2 mt-2 text-xs"><span className="truncate">{memory.content} <span className="text-[var(--text-tertiary)]">expires {new Date(memory.expires_at).toLocaleDateString()}</span></span><button type="button" onClick={() => api.del(`/assistant/memories/${memory.id}`).then(loadMemories).catch((err: Error) => setError(err.message))} title="Delete memory"><Trash2 size={13} /></button></div>)}
       </Card>
     </div>
   );

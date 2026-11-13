@@ -3,11 +3,11 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
 from models.database import get_db, KnowledgeDoc, KBCategory, User
+from jobs.repository import enqueue
 from auth.security import get_current_user, require_permission
 from auth.audit import log_action
 from api.schemas import KnowledgeDocCreate
 from rag.document_ingestion import extract_upload, persist_chunks
-from rag.query_engine import ensure_indexed
 
 router = APIRouter()
 
@@ -55,7 +55,12 @@ def create_doc(payload: KnowledgeDocCreate, db: Session = Depends(get_db), user:
     db.refresh(doc)
     persist_chunks(db, doc, payload.content, "manual-entry.md", "text/markdown")
     db.commit()
-    ensure_indexed(db, force=True)  # new doc should be retrievable by the RAG assistant immediately
+    job = enqueue(
+        db, job_type="rag.reindex", payload={"source_type": "knowledge_chunk", "document_id": doc.id},
+        idempotency_key=f"rag-reindex:document:{doc.id}", creator_user_id=user.id,
+        creator_username=user.username,
+    )
+    db.commit()
     log_action(db, user, "kb.create", target=f"kb_doc:{doc.id}", details=payload.title)
     return {"id": doc.id}
 
@@ -88,7 +93,12 @@ async def upload_doc(
     ingestion = persist_chunks(db, doc, content, filename, file.content_type)
     db.commit()
     db.refresh(doc)
-    ensure_indexed(db, force=True)
+    job = enqueue(
+        db, job_type="rag.reindex", payload={"source_type": "knowledge_chunk", "document_id": doc.id},
+        idempotency_key=f"rag-reindex:document:{doc.id}", creator_user_id=user.id,
+        creator_username=user.username,
+    )
+    db.commit()
     log_action(db, user, "kb.upload", target=f"kb_doc:{doc.id}", details=filename)
     return {
         "id": doc.id, "title": doc.title, "filename": filename,
@@ -104,6 +114,11 @@ def delete_doc(doc_id: int, db: Session = Depends(get_db), user: User = Depends(
         raise HTTPException(404, "Document not found")
     db.delete(doc)
     db.commit()
-    ensure_indexed(db, force=True)
+    job = enqueue(
+        db, job_type="rag.reindex", payload={"source_type": "knowledge_chunk", "document_id": doc_id},
+        idempotency_key=f"rag-reindex:document:{doc_id}", creator_user_id=user.id,
+        creator_username=user.username,
+    )
+    db.commit()
     log_action(db, user, "kb.delete", target=f"kb_doc:{doc_id}", details=doc.title)
     return {"ok": True}

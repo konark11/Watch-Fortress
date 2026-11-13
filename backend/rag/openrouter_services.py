@@ -8,6 +8,10 @@ BASE_URL = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 KEY = os.environ.get("OPENROUTER_API_KEY", "").strip()
 EMBEDDING_MODEL = os.environ.get("OPENROUTER_EMBEDDING_MODEL", "").strip()
 RERANK_MODEL = os.environ.get("OPENROUTER_RERANK_MODEL", "").strip()
+try:
+    REQUEST_TIMEOUT = max(1, min(int(os.environ.get("RAG_LLM_TIMEOUT_SECONDS", "30")), 120))
+except ValueError:
+    REQUEST_TIMEOUT = 30
 
 
 def _post(path: str, payload: dict) -> dict:
@@ -20,7 +24,7 @@ def _post(path: str, payload: dict) -> dict:
         headers={"Content-Type": "application/json", "Authorization": f"Bearer {KEY}"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=60) as response:
+    with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as response:
         return json.loads(response.read())
 
 
@@ -37,17 +41,22 @@ def embed(texts: list[str]) -> list[list[float]]:
 def rerank(query: str, documents: list[str]) -> list[float]:
     if not RERANK_MODEL:
         raise RuntimeError("Set OPENROUTER_RERANK_MODEL to enable API reranking")
-    data = _post("/chat/completions", {
+    data = _post("/rerank", {
         "model": RERANK_MODEL,
-        "messages": [{"role": "user", "content": f"Return only a JSON array of 0..1 relevance scores for these documents.\nQuery: {query}\nDocuments:\n" + "\n".join(f"{i}: {d}" for i, d in enumerate(documents))}],
-        "temperature": 0,
-        "max_tokens": 200,
+        "query": query,
+        "documents": documents,
+        "top_n": len(documents),
     })
-    scores = json.loads(data["choices"][0]["message"]["content"])
-    if (
-        not isinstance(scores, list)
-        or len(scores) != len(documents)
-        or not all(isinstance(score, (int, float)) for score in scores)
-    ):
+    results = data.get("results")
+    if not isinstance(results, list) or len(results) != len(documents):
         raise ValueError("OpenRouter reranker returned an invalid score array")
-    return [max(0.0, min(1.0, float(score))) for score in scores]
+    scores = [None] * len(documents)
+    for result in results:
+        index = result.get("index")
+        score = result.get("relevance_score")
+        if not isinstance(index, int) or not 0 <= index < len(documents) or not isinstance(score, (int, float)):
+            raise ValueError("OpenRouter reranker returned invalid result metadata")
+        scores[index] = max(0.0, min(1.0, float(score)))
+    if any(score is None for score in scores):
+        raise ValueError("OpenRouter reranker omitted a document score")
+    return [float(score) for score in scores]

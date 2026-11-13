@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import urllib.error
@@ -13,7 +14,17 @@ NVD_URL = os.environ.get(
     "VULN_NVD_URL",
     "https://services.nvd.nist.gov/rest/json/cves/2.0",
 )
-LOOKUP_TIMEOUT = 8
+NVD_API_KEY = os.environ.get("NVD_API_KEY", "").strip()
+NVD_USER_AGENT = "Watch-Fortress/1.0"
+logger = logging.getLogger(__name__)
+
+
+def lookup_timeout() -> int:
+    try:
+        value = int(os.environ.get("RAG_NVD_LOOKUP_TIMEOUT_SECONDS", "3"))
+    except ValueError:
+        value = 3
+    return min(max(value, 1), 10)
 
 
 def _description(cve: dict) -> str:
@@ -30,11 +41,30 @@ def lookup_question(question: str) -> dict | None:
         "resultsPerPage": "1",
     }
     url = f"{NVD_URL}?{urllib.parse.urlencode(params)}"
-    request = urllib.request.Request(url, headers={"Accept": "application/json"})
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": NVD_USER_AGENT,
+    }
+    if NVD_API_KEY:
+        headers["apiKey"] = NVD_API_KEY
+    request = urllib.request.Request(url, headers=headers)
     try:
-        with urllib.request.urlopen(request, timeout=LOOKUP_TIMEOUT) as response:
+        with urllib.request.urlopen(request, timeout=lookup_timeout()) as response:
             payload = json.loads(response.read())
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError, ValueError):
+    except urllib.error.HTTPError as exc:
+        logger.warning("NVD lookup HTTP failure: status=%s", exc.code)
+        return None
+    except urllib.error.URLError as exc:
+        logger.warning("NVD lookup network failure: reason_type=%s", type(exc.reason).__name__)
+        return None
+    except TimeoutError:
+        logger.warning("NVD lookup timed out")
+        return None
+    except OSError as exc:
+        logger.warning("NVD lookup OS failure: error_type=%s", type(exc).__name__)
+        return None
+    except ValueError:
+        logger.warning("NVD lookup returned invalid JSON")
         return None
 
     vulnerabilities = payload.get("vulnerabilities", [])

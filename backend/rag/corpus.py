@@ -42,6 +42,7 @@ def build_corpus(db: Session | None = None) -> list[dict]:
                 f"Known actively exploited: {'yes' if kb.is_kev(cve_id) else 'no'}. "
                 f"Related CWEs: {', '.join(meta.get('cwe', []))}."
             ),
+            "metadata": {"document_type": "CVE", "severity": str(meta.get("severity", "unknown")).lower()},
         })
 
     for cwe_id, meta in kb.cwe_db.items():
@@ -50,6 +51,7 @@ def build_corpus(db: Session | None = None) -> list[dict]:
             "source": "CWE",
             "title": f"{cwe_id} - {meta.get('name', '')}",
             "text": f"{cwe_id} ({meta.get('name', '')}): {meta.get('description', '')}",
+            "metadata": {"document_type": "CWE"},
         })
 
     for capec_id, meta in kb.capec_db.items():
@@ -58,6 +60,7 @@ def build_corpus(db: Session | None = None) -> list[dict]:
             "source": "CAPEC",
             "title": f"{capec_id} - {meta.get('name', '')}",
             "text": f"{capec_id} ({meta.get('name', '')}): {meta.get('description', '')}",
+            "metadata": {"document_type": "CAPEC"},
         })
 
     for tech_id, meta in kb.attack_db.items():
@@ -66,6 +69,7 @@ def build_corpus(db: Session | None = None) -> list[dict]:
             "source": "MITRE ATT&CK",
             "title": f"{tech_id} - {meta.get('name', '')}",
             "text": f"MITRE ATT&CK {tech_id} ({meta.get('name', '')}) belongs to the {meta.get('tactic', '')} tactic.",
+            "metadata": {"document_type": "MITRE ATT&CK"},
         })
 
     for owasp_id, meta in kb.owasp_db.items():
@@ -74,6 +78,7 @@ def build_corpus(db: Session | None = None) -> list[dict]:
             "source": "OWASP",
             "title": f"{owasp_id} - {meta.get('name', '')}",
             "text": f"OWASP Top 10 {owasp_id}: {meta.get('name', '')}.",
+            "metadata": {"document_type": "OWASP"},
         })
 
     if db is not None:
@@ -84,6 +89,7 @@ def build_corpus(db: Session | None = None) -> list[dict]:
                     "id": f"kb:{kdoc.id}",
                     "source": f"Internal KB ({kdoc.category.value})",
                     "title": kdoc.title,
+                    "metadata": {"document_type": "Internal KB", "document_id": kdoc.id},
                     "text": f"{kdoc.title}: {kdoc.content}",
                 })
             for chunk in chunks:
@@ -96,6 +102,12 @@ def build_corpus(db: Session | None = None) -> list[dict]:
                     "title": f"{kdoc.title} (chunk {chunk.chunk_index + 1})",
                     "text": chunk.content,
                     "embedding": chunk.embedding,
+                    "metadata": {
+                        "document_type": "Internal KB",
+                        "document_id": kdoc.id,
+                        "embedding": metadata.get("embedding"),
+                        **metadata,
+                    },
                 })
 
         # Keep completed scan evidence in the same retrievable corpus as the
@@ -131,6 +143,7 @@ def build_corpus(db: Session | None = None) -> list[dict]:
                     f"Completed: {scan.finished_at or 'unknown'}. "
                     f"Finding details: {' '.join(finding_lines) or 'No findings were reported.'}"
                 ),
+                "metadata": {"document_type": "Completed scan", "scan_id": scan.id},
             })
 
         for finding in db.query(Finding).order_by(Finding.id.desc()).all():
@@ -148,6 +161,14 @@ def build_corpus(db: Session | None = None) -> list[dict]:
                     f"Remediation: {finding.solution or 'not provided'}. "
                     f"Correlated vulnerability: {vulnerability.canonical_title if vulnerability else 'none'}."
                 ),
+                "metadata": {
+                    "document_type": "Scan finding",
+                    "severity": finding.severity.value,
+                    "port": finding.port_number,
+                    "cves": finding.cve_ids or [],
+                    "vm": finding.asset_ip,
+                    "scan_id": finding.scan_id,
+                },
             })
 
         for asset in db.query(Asset).all():
@@ -164,6 +185,7 @@ def build_corpus(db: Session | None = None) -> list[dict]:
                     f"OS {asset.os_name or 'unknown'}, internet exposed: {asset.internet_exposed}. "
                     f"Criticality: {asset.criticality.value}. Open or discovered ports and services: {ports}."
                 ),
+                "metadata": {"document_type": "Scanned asset", "vm": asset.ip_address},
             })
 
     return docs

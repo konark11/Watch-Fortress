@@ -12,7 +12,6 @@ export interface User {
   is_active: boolean;
   created_at: string;
 }
-
 export interface Asset {
   id: number;
   ip_address: string;
@@ -81,9 +80,27 @@ export interface DashboardStats {
 
 export interface AssistantResponse {
   answer: string;
-  sources: { source: string; title: string; relevance: number }[];
+  sources: { id?: string; source: string; title: string; relevance: number }[];
   structured_results: any[];
   provider?: string;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  sources?: { id?: string; source: string; title: string; relevance: number }[];
+}
+
+export type RAGStatus = AssistantStatus;
+export type ReportRecord = ReportJob;
+
+export interface AssistantStatus {
+  generation: { mode: string; name: string; provider: string; model: string | null; status: string };
+  embedding: { model: string; revision: string | null; device: string; active: { dimension: number; provider: string }; index: { state: string; legacy_vectors?: number; incompatible_vectors?: number } };
+  retrieval: { dense: boolean; bm25: boolean; rrf: boolean; dense_top_k: number; sparse_top_k: number; rrf_k: number; final_evidence_k: number };
+  reranker: { provider: string; model: string; loaded: boolean };
+  jev: { mode: string; model: string; status: string; warning?: string };
+  index: { knowledge_documents: number; knowledge_chunks: number; state: string };
 }
 
 export interface KnowledgeDoc {
@@ -238,4 +255,34 @@ export interface AuditEntry {
   details: string;
   ip_address: string;
   timestamp: string;
+}
+
+export type OpsMarkerType = "threat" | "caution" | "planning" | "observation";
+export type OpsArrowType = "movement" | "attack";
+
+export interface OpsMarker {
+  id: number;
+  grid_id: string;
+  latitude: number;
+  longitude: number;
+  marker_type: OpsMarkerType;
+  title: string;
+  notes: string | null;
+  altitude: number | null;
+  source_label: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface OpsArrow {
+  id: number;
+  arrow_type: OpsArrowType;
+  label: string | null;
+  start_lat: number;
+  start_lon: number;
+  end_lat: number;
+  end_lon: number;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
 }

@@ -19,20 +19,29 @@ from __future__ import annotations
 import logging
 import re
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 
 from models.database import Vulnerability, Finding, Asset, Scan, ScanStatus, Severity
-from rag.retriever import VectorRetriever
-from rag.corpus import build_corpus
-from rag.embeddings import embed_texts
-from rag.llm_providers import get_provider
+from rag.retriever import HybridRetriever
+from rag.embeddings import active_embedding_metadata, embed_texts
+from rag.llm_providers import get_provider, provider_status, validate_provider_configuration
 from rag.internet_lookup import lookup_question
-from rag.openrouter_services import rerank as openrouter_rerank
+from rag.reranker import rerank
+from rag.settings import DENSE_TOP_K, FINAL_EVIDENCE_K, FUSION_K, RERANK_ENABLED, RERANK_K
+from rag.indexing.repository import latest_run
+from rag.retrieval.service import backend_name, capability as retrieval_capability
 from security.login_analysis import analyze_login_failures, render_login_analysis
+from observability import answer_outcomes, citations, increment, observe, rag_latency, rag_stage_duration, retrieval_candidates, span
+import time
 
-_retriever = VectorRetriever()
+_retriever = HybridRetriever()
 _indexed = False
+_index_error: str | None = None
 logger = logging.getLogger(__name__)
+
+
+class EmbeddingCompatibilityError(RuntimeError):
+    """Raised when persisted vectors cannot safely be used by the active index."""
 
 VULN_TYPE_KEYWORDS = {
     "sql injection": ["sql injection", "sqli"],
@@ -68,6 +77,18 @@ _EXAMPLE_QUESTIONS = [
     "Which hosts have privilege escalation risks?",
 ]
 
+_KNOWN_VULNERABILITY_ALIASES = {
+    "terrapin": {"terrapin", "cve-2023-48795"},
+    "log4shell": {"log4shell", "cve-2021-44228"},
+    "heartbleed": {"heartbleed", "cve-2014-0160"},
+    "shellshock": {"shellshock", "cve-2014-6271"},
+    "proxylogon": {"proxylogon", "cve-2021-26855"},
+    "printnightmare": {"printnightmare", "cve-2021-34527"},
+    "dirty pipe": {"dirty pipe", "cve-2022-0847"},
+    "eternalblue": {"eternalblue", "cve-2017-0144"},
+    "bluekeep": {"bluekeep", "cve-2019-0708"},
+}
+
 
 def _greeting_or_help_answer(db: Session, is_help: bool) -> dict:
     ensure_indexed(db)
@@ -87,18 +108,57 @@ def _greeting_or_help_answer(db: Session, is_help: bool) -> dict:
 
 
 def ensure_indexed(db: Session, force: bool = False):
-    global _indexed
-    if _indexed and not force:
+    global _indexed, _index_error
+    run = latest_run(db)
+    if not run or run["state"] not in {"ready", "stale"}:
+        _indexed = False
+        _index_error = "RAG index is not ready; run the explicit bootstrap indexing job."
         return
-    documents = build_corpus(db)
-    missing = [document for document in documents if not document.get("embedding")]
-    generated = iter(embed_texts([document["text"] for document in missing]))
-    embeddings = [
-        document.get("embedding") or next(generated)
-        for document in documents
-    ]
-    _retriever.index(documents, embeddings=embeddings, embedder=embed_texts)
+    active = active_embedding_metadata()
+    if run["embedding_dimension"] != active["dimension"] or run["embedding_model"] != active["model"]:
+        raise EmbeddingCompatibilityError(
+            "Persisted retrieval vectors are incompatible with the active embedding model; "
+            "run a deliberate full reindex."
+        )
     _indexed = True
+    _index_error = None
+
+
+def index_status(db: Session) -> dict:
+    """Return safe operational state without exposing environment secrets."""
+    active = active_embedding_metadata()
+    run = latest_run(db)
+    counts = db.execute(text(
+        "SELECT COUNT(*) FROM rag_index_records WHERE deleted_at IS NULL"
+    )).scalar_one()
+    state = "not_indexed" if not run else run["state"]
+    db_capability = retrieval_capability(db)
+    if backend_name(db) == "postgres" and not db_capability.get("available"):
+        state = "unavailable"
+    if run and (
+        run["embedding_dimension"] != active["dimension"]
+        or run["embedding_model"] != active["model"]
+    ):
+        state = "incompatible"
+    return {
+        "state": state,
+        "document_count": int(counts),
+        "stored_embedding_count": int(counts),
+        "active_embedding": active,
+        "last_job": dict(run) if run else None,
+        "last_index_summary": {
+            key: run[key] for key in (
+                "records_scanned", "added", "updated", "unchanged", "deleted", "failed"
+            )
+        } if run else None,
+        "remediation": (
+            "Run `python -m rag.bootstrap` for the initial incremental index; "
+            "enable RAG_FULL_REINDEX_ENABLED only for an administrator-approved rebuild."
+            if state != "ready" else None
+        ),
+        "backend": backend_name(db),
+        "capability": db_capability,
+    }
 
 
 def _rerank_candidates(
@@ -107,20 +167,32 @@ def _rerank_candidates(
     k: int,
 ) -> list[tuple[dict, float]]:
     """Optionally score a broad local candidate set with a query-document model."""
-    if len(retrieved) <= 1:
+    if not RERANK_ENABLED or len(retrieved) <= 1:
         return retrieved[:k]
-    candidates = retrieved[:min(len(retrieved), max(k * 4, 20))]
+    candidates = retrieved[:min(len(retrieved), max(k, RERANK_K))]
     try:
-        scores = openrouter_rerank(question, [doc["text"] for doc, _ in candidates])
-    except (KeyError, RuntimeError, ValueError, TypeError, OSError) as exc:
-        logger.warning("Optional OpenRouter reranking unavailable: %s", exc)
+        scores = rerank(question, [doc["text"] for doc, _ in candidates])
+    except (ImportError, RuntimeError, ValueError, TypeError, OSError) as exc:
+        logger.warning("OpenRouter reranking unavailable: %s", exc)
         return retrieved[:k]
     reranked = sorted(
         zip((doc for doc, _ in candidates), scores),
         key=lambda item: item[1],
         reverse=True,
     )
-    return [(doc, score) for doc, score in reranked[:k]]
+    selected: list[tuple[dict, float]] = []
+    seen_documents: set[str] = set()
+    for doc, score in reranked:
+        document_key = doc.get("metadata", {}).get("document_id")
+        if not document_key:
+            document_key = re.sub(r"\s+\(chunk\s+\d+\)$", "", doc.get("title", doc["id"]))
+        if document_key in seen_documents:
+            continue
+        seen_documents.add(document_key)
+        selected.append((doc, score))
+        if len(selected) == k:
+            break
+    return selected
 
 
 def _looks_like_data_question(question: str) -> bool:
@@ -155,6 +227,162 @@ def _is_scan_list_question(question: str) -> bool:
 def _is_explanation_follow_up(question: str) -> bool:
     q = question.lower().strip()
     return bool(re.search(r"\b(why|how come|what caused|what does that mean)\b", q))
+
+
+def _metadata_filter(question: str):
+    """Build pre-retrieval filters from explicit security metadata in a query."""
+    lowered = question.lower()
+    severity = next((value for value in SEVERITIES if value in lowered), None)
+    port_match = re.search(r"\bport\s+(\d{1,5})\b", lowered)
+    cve_match = re.search(r"\bcve-\d{4}-\d{4,7}\b", lowered, re.IGNORECASE)
+    vm_match = re.search(
+        r"\b(?:vm|host|asset|ip)\s+((?:\d{1,3}\.){3}\d{1,3})\b",
+        lowered,
+    )
+    document_type = next((
+        source for term, source in {
+            "cve": "CVE", "cwe": "CWE", "capec": "CAPEC",
+            "owasp": "OWASP", "mitre": "MITRE ATT&CK",
+            "finding": "Scan finding", "scan": "Completed scan",
+        }.items() if term in lowered
+    ), None)
+    if not any((severity, port_match, cve_match, vm_match, document_type)):
+        return None
+
+    def matches(doc: dict) -> bool:
+        metadata = doc.get("metadata", {})
+        text = f"{doc.get('title', '')} {doc.get('text', '')}".lower()
+        if document_type and not (
+            metadata.get("document_type") == document_type
+            or doc.get("source") == document_type
+            or document_type.lower() in text
+        ):
+            return False
+        if severity and metadata.get("severity") not in (None, severity, "unknown"):
+            return False
+        if port_match and port_match.group(1) not in text:
+            return False
+        if cve_match and cve_match.group(0).lower() not in text:
+            return False
+        if vm_match and vm_match.group(1) not in text:
+            return False
+        return True
+
+    return matches
+
+
+def _named_vulnerability_terms(question: str) -> set[str]:
+    """Return identifiers that must be present in evidence for specific asks."""
+    lowered = question.lower()
+    terms: set[str] = set(re.findall(r"\bcve-\d{4}-\d{4,7}\b", lowered))
+    known_match = False
+    for name, aliases in _KNOWN_VULNERABILITY_ALIASES.items():
+        if name in lowered:
+            terms.update(aliases)
+            known_match = True
+    if terms or known_match:
+        return terms
+    words = re.findall(r"\b[A-Z][A-Za-z0-9.+-]{3,}\b", question)
+    ignored = {"Explain", "What", "How", "Why", "Attack", "Vulnerability"}
+    terms.update(word.lower() for word in words if word not in ignored)
+    return terms
+
+
+def _has_named_vulnerability_evidence(
+    question: str,
+    retrieved: list[tuple[dict, float]],
+) -> bool:
+    terms = _named_vulnerability_terms(question)
+    if not terms:
+        return True
+    for document, _ in retrieved:
+        haystack = f"{document.get('title', '')} {document.get('text', '')}".lower()
+        if any(term in haystack for term in terms):
+            return True
+    return False
+
+
+def _has_adequate_local_evidence(
+    question: str,
+    retrieved: list[tuple[dict, float]],
+) -> bool:
+    if not retrieved:
+        return False
+    if retrieved[0][1] >= 0.08:
+        return True
+    stopwords = {
+        "and", "are", "does", "how", "is", "it", "should", "the", "this",
+        "to", "what", "why",
+    }
+    terms = {
+        term for term in re.findall(r"[a-z0-9]+", question.lower())
+        if len(term) >= 3 and term not in stopwords
+    }
+    if not terms:
+        return False
+    for document, _ in retrieved[:FINAL_EVIDENCE_K]:
+        haystack = f"{document.get('title', '')} {document.get('text', '')}".lower()
+        if sum(term in haystack for term in terms) >= min(2, len(terms)):
+            return True
+    return False
+
+
+def _should_use_nvd_fallback(
+    retrieved: list[tuple[dict, float]],
+    previous_user_questions: list[str],
+    named_query: bool = False,
+    local_evidence_adequate: bool = False,
+) -> bool:
+    return (
+        (not retrieved or (
+            retrieved[0][1] < 0.08
+            and not named_query
+            and not local_evidence_adequate
+        ))
+        and not previous_user_questions
+    )
+
+
+def _metadata_criteria(question: str) -> dict:
+    lowered = question.lower()
+    criteria: dict = {}
+    severity = next((value for value in SEVERITIES if value in lowered), None)
+    if severity:
+        criteria["severity"] = severity
+    port_match = re.search(r"\bport\s+(\d{1,5})\b", lowered)
+    if port_match:
+        criteria["port"] = int(port_match.group(1))
+    cve_match = re.search(r"\bcve-\d{4}-\d{4,7}\b", lowered, re.IGNORECASE)
+    if cve_match:
+        criteria["cve"] = cve_match.group(0)
+    vm_match = re.search(
+        r"\b(?:vm|host|asset|ip)\s+((?:\d{1,3}\.){3}\d{1,3})\b",
+        lowered,
+    )
+    if vm_match:
+        criteria["vm"] = vm_match.group(1)
+    criteria["document_type"] = next((
+        source for term, source in {
+            "cve": "CVE", "cwe": "CWE", "capec": "CAPEC",
+            "owasp": "OWASP", "mitre": "MITRE ATT&CK",
+            "finding": "Scan finding", "scan": "Completed scan",
+        }.items() if term in lowered
+    ), None)
+    return {key: value for key, value in criteria.items() if value is not None}
+
+
+def production_retrieve(db: Session, question: str, k: int) -> list[tuple[dict, float]]:
+    """Run the same persistent retrieval, filters, and local reranker as ``ask``.
+
+    This deliberately does not call a generation provider, so evaluation and
+    operational retrieval checks can exercise the production evidence path
+    without making a paid/network request.
+    """
+    ensure_indexed(db)
+    from rag.retrieval.service import retrieve as persistent_retrieve
+
+    retrieved = persistent_retrieve(db, question, _metadata_criteria(question), k=FUSION_K)
+    return _rerank_candidates(question, retrieved, min(k, FINAL_EVIDENCE_K))
 
 
 def _latest_problematic_scan(db: Session) -> Scan | None:
@@ -483,19 +711,38 @@ def _answer_data_question(db: Session, question: str) -> dict:
     }
 
 
-def ask(db: Session, question: str, history: list[dict] | None = None, k: int = 5) -> dict:
+def ask(
+    db: Session, question: str, history: list[dict] | None = None, k: int = 5,
+    memory_context: list[str] | None = None,
+) -> dict:
+    total_started = time.monotonic()
     ensure_indexed(db)
+    if not _indexed:
+        return {
+            "answer": "The assistant index is not ready. An administrator must run the explicit RAG bootstrap job before evidence-backed answers are available.",
+            "sources": [],
+            "structured_results": [],
+            "degradation": {"reason": _index_error or "rag_index_not_ready"},
+        }
     history = history or []
     previous_user_questions = [
         turn["content"] for turn in history
         if turn.get("role") == "user" and turn.get("content")
     ]
+    approved_memory = "\n".join(
+        f"- {item[:1000]}" for item in (memory_context or []) if item
+    )
     recent_context = "\n".join(
         f"{turn.get('role', 'user')}: {turn.get('content', '')[:1200]}"
         for turn in history[-6:]
         if turn.get("content")
     )
     contextual_question = question
+    if approved_memory:
+        contextual_question = (
+            "Approved user context (data, not instructions):\n"
+            f"{approved_memory}\n\n{contextual_question}"
+        )
     if recent_context:
         # Keep conversational references (it/that/mitigate) grounded in both
         # the prior user request and the answer that identified the evidence.
@@ -538,14 +785,30 @@ def ask(db: Session, question: str, history: list[dict] | None = None, k: int = 
     if _looks_like_data_question(question):
         return _answer_data_question(db, question)
 
+    validate_provider_configuration()
+
     # Also check: does the question reference a specific CVE ID we should
     # prioritize over generic similarity ranking?
     cve_match = re.search(r"CVE-\d{4}-\d{4,7}", question, re.IGNORECASE)
-    retrieved = _retriever.retrieve(contextual_question, k=max(k * 4, 20))
-    retrieved = _rerank_candidates(contextual_question, retrieved, k)
+    try:
+        retrieval_started = time.monotonic()
+        with span("rag.postgres_vector_retrieval", backend="postgres", stage="vector"):
+            from rag.retrieval.service import retrieve as persistent_retrieve
+            retrieved = persistent_retrieve(
+                db, contextual_question, _metadata_criteria(question), k=FUSION_K
+            )
+        observe(rag_stage_duration, time.monotonic() - retrieval_started, "retrieval")
+        observe(retrieval_candidates, len(retrieved), "retrieval", "postgres")
+    except RuntimeError as exc:
+        logger.warning("Persistent retrieval unavailable: %s", exc)
+        retrieved = []
+    rerank_started = time.monotonic()
+    with span("rag.local_reranking", stage="reranking", model="local-bge"):
+        retrieved = _rerank_candidates(contextual_question, retrieved, min(k, FINAL_EVIDENCE_K))
+    observe(rag_stage_duration, time.monotonic() - rerank_started, "reranking")
     if cve_match:
         cve_id = cve_match.group(0).upper()
-        exact = [d for d in _retriever.docs if d["id"] == f"cve:{cve_id}"]
+        exact = [d for d, _ in retrieved if d["id"] == f"cve:{cve_id}"]
         if exact:
             retrieved = [(exact[0], 1.0)] + [
                 (doc, score) for doc, score in retrieved if doc["id"] != f"cve:{cve_id}"
@@ -559,7 +822,7 @@ def ask(db: Session, question: str, history: list[dict] | None = None, k: int = 
     if target_tokens:
         exact_scans = [
             (doc, 1.0)
-            for doc in _retriever.docs
+            for doc, _ in retrieved
             if doc.get("source") == "Completed scan"
             and any(token in doc.get("title", "").lower() for token in target_tokens)
         ]
@@ -568,20 +831,54 @@ def ask(db: Session, question: str, history: list[dict] | None = None, k: int = 
             retrieved = exact_scans + [(doc, score) for doc, score in retrieved if doc["id"] not in exact_ids]
             retrieved = retrieved[:k]
 
-    # Do not answer with an unrelated local document when the question is
-    # outside the indexed corpus. NVD is a read-only public fallback for
-    # vulnerability questions; local evidence always takes precedence.
-    if (not retrieved or retrieved[0][1] < 0.08):
+    named_query = bool(_named_vulnerability_terms(question))
+    if named_query and not _has_named_vulnerability_evidence(question, retrieved):
+        logger.info("named vulnerability evidence rejected: local candidates did not match query identifiers")
+        retrieved = []
+
+    # NVD is a bounded, read-only fallback. Avoid external lookup for
+    # conversational follow-ups and when local evidence is already adequate.
+    local_evidence_adequate = _has_adequate_local_evidence(question, retrieved)
+    if _should_use_nvd_fallback(
+        retrieved, previous_user_questions, named_query, local_evidence_adequate
+    ):
         internet_doc = lookup_question(question)
-        if internet_doc:
+        if internet_doc and (not named_query or _has_named_vulnerability_evidence(question, [(internet_doc, 1.0)])):
             retrieved = [(internet_doc, 1.0)] + retrieved[: k - 1]
 
+    if named_query and not retrieved:
+        return {
+            "answer": (
+                "I couldn't find grounded local evidence for this specific vulnerability. "
+                "The bounded external lookup did not return a matching source."
+            ),
+            "sources": [],
+            "structured_results": [],
+            "degradation": {"reason": "named_vulnerability_evidence_unavailable"},
+        }
+
     provider = get_provider()
-    answer_text = provider.generate(question, retrieved)
+    generation_started = time.monotonic()
+    with span("rag.groq_generation", provider=provider.name):
+        answer_text = provider.generate(question, retrieved)
+    observe(rag_stage_duration, time.monotonic() - generation_started, "generation")
+    generation_status = provider_status()
+    increment(answer_outcomes, "fallback" if generation_status.get("last_degradation_reason") else "grounded")
+    observe(citations, len(retrieved))
+    observe(rag_latency, time.monotonic() - total_started)
 
     return {
         "answer": answer_text,
-        "sources": [{"source": d["source"], "title": d["title"], "relevance": round(score, 3)} for d, score in retrieved],
+        "sources": [{
+            "id": d["id"],
+            "source": d["source"],
+            "title": d["title"],
+            "relevance": round(score, 3),
+        } for d, score in retrieved],
         "structured_results": [],
         "provider": provider.name,
+        "degradation": (
+            {"reason": generation_status["last_degradation_reason"]}
+            if generation_status.get("last_degradation_reason") else None
+        ),
     }

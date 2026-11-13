@@ -18,6 +18,10 @@ from abc import ABC, abstractmethod
 from typing import Callable, Optional
 
 
+class ScannerCancelled(Exception):
+    """Raised when a running scanner is stopped by the user."""
+
+
 class ScannerBackend(ABC):
     scanner_type: str = "custom"
 

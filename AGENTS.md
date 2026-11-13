@@ -21,6 +21,7 @@
 - Add tests for new behavior and run relevant existing tests.
 - Update documentation and `.env.example` when configuration changes.
 - Never claim a feature or test works without verifying it.
+- write the simplest code that will do the job.
 
 ## RAG & Research
 

@@ -131,9 +131,11 @@ function CrosshairAndSelect({ active, onClick }: { active: boolean; onClick: (la
 
 function ArrowOverlay({ arrow }: { arrow: OpsArrow }) {
   const color = ARROW_COLOR[arrow.arrow_type];
-  const a = { lat: arrow.start_lat, lon: arrow.start_lon };
-  const b = { lat: arrow.end_lat, lon: arrow.end_lon };
-  const icon = useMemo(() => arrowheadIcon(color, bearingDeg(a, b)), [color, arrow.start_lat, arrow.start_lon, arrow.end_lat, arrow.end_lon]);
+  const icon = useMemo(() => {
+    const a = { lat: arrow.start_lat, lon: arrow.start_lon };
+    const b = { lat: arrow.end_lat, lon: arrow.end_lon };
+    return arrowheadIcon(color, bearingDeg(a, b));
+  }, [color, arrow.start_lat, arrow.start_lon, arrow.end_lat, arrow.end_lon]);
   return (
     <>
       <Polyline

@@ -90,6 +90,25 @@ class ConversationTurn(BaseModel):
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     history: list[ConversationTurn] = Field(default_factory=list, max_length=12)
+    conversation_id: str | None = None
+
+
+class ConversationCreate(BaseModel):
+    title: str | None = Field(default=None, max_length=255)
+
+
+class ConversationUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=255)
+    archived: bool | None = None
+
+
+class MemoryCreate(BaseModel):
+    memory_type: str = Field(min_length=1, max_length=80)
+    content: str = Field(min_length=1, max_length=2000)
+    scope: str = Field(default="user", pattern="^(user|conversation)$")
+    conversation_id: str | None = None
+    source_message_id: str | None = None
+    expires_at: datetime | None = None
 
 
 class KnowledgeDocCreate(BaseModel):

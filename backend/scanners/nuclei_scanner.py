@@ -17,8 +17,9 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from typing import Callable, Optional
-from scanners.base import ScannerBackend
+from scanners.base import ScannerBackend, ScannerCancelled
 
 SEVERITY_PROFILES = {
     "critical_high": ["critical", "high"],
@@ -51,14 +52,18 @@ class NucleiScanner(ScannerBackend):
         severity_profile = options.get("severity_profile", "standard")
         severities = SEVERITY_PROFILES.get(severity_profile, SEVERITY_PROFILES["standard"])
         template_tags = options.get("tags", "")  # e.g. "cve,exposure"
+        automatic_scan = bool(options.get("automatic_scan", False))
+        normalized_target = target if "://" in target else f"http://{target}"
 
         if on_progress:
-            on_progress(5, f"Starting nuclei against {target}")
+            on_progress(5, f"Starting nuclei against {normalized_target}")
 
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
             out_path = tmp.name
 
-        cmd = ["nuclei", "-u", target, "-jsonl", "-o", out_path, "-severity", ",".join(severities), "-silent"]
+        cmd = ["nuclei", "-u", normalized_target, "-jsonl", "-o", out_path, "-severity", ",".join(severities), "-silent"]
+        if automatic_scan:
+            cmd.append("-as")
         tdir = _templates_dir()
         if tdir:
             cmd += ["-t", tdir]
@@ -66,9 +71,39 @@ class NucleiScanner(ScannerBackend):
             cmd += ["-tags", template_tags]
 
         try:
-            subprocess.run(cmd, capture_output=True, text=True, timeout=options.get("timeout_seconds", 900))
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            cancel_check = options.get("_cancel_check")
+            deadline = time.monotonic() + options.get("timeout_seconds", 900)
+            try:
+                while proc.poll() is None:
+                    if callable(cancel_check) and cancel_check():
+                        proc.terminate()
+                        try:
+                            proc.wait(timeout=5)
+                        except subprocess.TimeoutExpired:
+                            proc.kill()
+                            proc.wait()
+                        raise ScannerCancelled()
+                    if time.monotonic() >= deadline:
+                        proc.kill()
+                        proc.wait()
+                        raise subprocess.TimeoutExpired(cmd, options.get("timeout_seconds", 900))
+                    time.sleep(0.5)
+                stdout, stderr = proc.communicate()
+                completed = subprocess.CompletedProcess(cmd, proc.returncode, stdout, stderr)
+            finally:
+                if proc.poll() is None:
+                    proc.kill()
+                    proc.wait()
         except subprocess.TimeoutExpired:
-            raise RuntimeError(f"nuclei scan against {target} timed out")
+            raise RuntimeError(f"nuclei scan against {normalized_target} timed out")
+
+        if completed.returncode != 0:
+            detail = (completed.stderr or completed.stdout).strip()
+            raise RuntimeError(
+                f"nuclei exited with code {completed.returncode}"
+                + (f": {detail[:500]}" if detail else "")
+            )
 
         if on_progress:
             on_progress(90, "nuclei scan finished, parsing results")
@@ -82,4 +117,4 @@ class NucleiScanner(ScannerBackend):
         if on_progress:
             on_progress(100, "Complete")
 
-        return {"raw_output": raw_output, "filename": f"nuclei_{target.replace('/', '_').replace(':', '_')}.jsonl"}
+        return {"raw_output": raw_output, "filename": f"nuclei_{normalized_target.replace('/', '_').replace(':', '_')}.jsonl"}

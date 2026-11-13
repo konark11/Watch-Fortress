@@ -9,6 +9,8 @@ backend/data/reports/*.json
 backend/data/packages/
 node_modules/
 frontend/dist/
+frontend/*.tsbuildinfo
+graphify-out/
 *.log
 .env
 run_online.sh

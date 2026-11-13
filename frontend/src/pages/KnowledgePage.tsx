@@ -1,8 +1,27 @@
 import { useEffect, useState } from "react";
-import { Plus, BookOpen, ListChecks, Bug, Wrench, Scale, Lightbulb, X, Trash2, Upload } from "lucide-react";
+import {
+  Plus,
+  BookOpen,
+  ListChecks,
+  Bug,
+  Wrench,
+  Scale,
+  Lightbulb,
+  X,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { api } from "../api/client";
 import type { KnowledgeDoc } from "../types";
-import { Card, Button, Input, Select, EmptyState } from "../components/ui";
+import {
+  Card,
+  Button,
+  Input,
+  Select,
+  EmptyState,
+  Drawer,
+  SearchInput,
+} from "../components/ui";
 
 type FieldType = "textarea" | "steps";
 type FieldSchema = { key: string; label: string; type: FieldType; placeholder?: string };
@@ -15,43 +34,39 @@ const CATEGORIES = [
   { value: "lessons_learned", label: "Lessons Learned" },
 ];
 
-// What distinguishes each doc type from every other: its own set of
-// fields, captured separately instead of one generic textarea. These get
-// composed into a single "## Section" formatted string for storage (no
-// backend schema change needed) and parsed back out for display.
 const CATEGORY_SCHEMAS: Record<string, FieldSchema[]> = {
   playbook: [
     { key: "Objective", label: "Objective", type: "textarea", placeholder: "What this playbook accomplishes and when to use it" },
-    { key: "Steps", label: "Steps", type: "steps", placeholder: "e.g. Isolate the affected host from the network" },
+    { key: "Steps", label: "Execution Steps", type: "steps", placeholder: "e.g. Isolate the affected host from the internal VLAN" },
   ],
   vulnerability_writeup: [
-    { key: "Summary", label: "Summary", type: "textarea", placeholder: "What the vulnerability is, in a sentence or two" },
-    { key: "Affected Systems", label: "Affected Systems", type: "textarea", placeholder: "Which assets, services, or software versions are exposed" },
-    { key: "Impact", label: "Impact", type: "textarea", placeholder: "What an attacker could actually do with this" },
-    { key: "Evidence", label: "Evidence / Technical Details", type: "textarea", placeholder: "Proof-of-concept notes, scan output, request/response samples" },
+    { key: "Summary", label: "Executive Summary", type: "textarea", placeholder: "What the vulnerability is, in a sentence or two" },
+    { key: "Affected Systems", label: "Affected Systems & Scope", type: "textarea", placeholder: "Which assets, services, or software versions are exposed" },
+    { key: "Impact", label: "Threat Impact Analysis", type: "textarea", placeholder: "What an adversary could actually execute or exfiltrate" },
+    { key: "Evidence", label: "Evidence & Technical Details", type: "textarea", placeholder: "Proof-of-concept notes, scan output, or raw request samples" },
   ],
   remediation_guide: [
-    { key: "Remediation Steps", label: "Remediation Steps", type: "steps", placeholder: "e.g. Apply vendor patch KB123456" },
-    { key: "Verification", label: "Verification", type: "textarea", placeholder: "How to confirm the fix actually worked" },
+    { key: "Remediation Steps", label: "Remediation & Patch Steps", type: "steps", placeholder: "e.g. Apply vendor hotfix or configure firewall blocklist" },
+    { key: "Verification", label: "Verification Procedure", type: "textarea", placeholder: "How to confirm the mitigation successfully eliminated exposure" },
   ],
   organization_policy: [
-    { key: "Policy Statement", label: "Policy Statement", type: "textarea", placeholder: "The actual rule/requirement" },
-    { key: "Scope", label: "Scope", type: "textarea", placeholder: "Who and what this policy applies to" },
-    { key: "Enforcement", label: "Enforcement", type: "textarea", placeholder: "What happens if this isn't followed" },
+    { key: "Policy Statement", label: "Policy Requirement Statement", type: "textarea", placeholder: "The exact governance rule or baseline requirement" },
+    { key: "Scope", label: "Applicability Scope", type: "textarea", placeholder: "Who and what infrastructure this policy governs" },
+    { key: "Enforcement", label: "Audit & Enforcement", type: "textarea", placeholder: "Verification cadence and escalation path" },
   ],
   lessons_learned: [
-    { key: "What Happened", label: "What Happened", type: "textarea", placeholder: "A factual account of the incident" },
-    { key: "Root Cause", label: "Root Cause", type: "textarea", placeholder: "The underlying reason it occurred" },
-    { key: "Action Items", label: "Action Items", type: "steps", placeholder: "e.g. Add alerting for this condition" },
+    { key: "What Happened", label: "Incident Chronology", type: "textarea", placeholder: "Factual account of the security event or exercise" },
+    { key: "Root Cause", label: "Root Cause Analysis", type: "textarea", placeholder: "The underlying configuration or architecture vulnerability" },
+    { key: "Action Items", label: "Corrective Action Items", type: "steps", placeholder: "e.g. Add automated regression scan to CI/CD pipeline" },
   ],
 };
 
-const CATEGORY_META: Record<string, { icon: typeof BookOpen; color: string }> = {
-  playbook: { icon: ListChecks, color: "text-[var(--brand)]" },
-  vulnerability_writeup: { icon: Bug, color: "text-[var(--critical)]" },
-  remediation_guide: { icon: Wrench, color: "text-[var(--low)]" },
-  organization_policy: { icon: Scale, color: "text-[var(--medium)]" },
-  lessons_learned: { icon: Lightbulb, color: "text-[var(--high)]" },
+const CATEGORY_META: Record<string, { icon: typeof BookOpen; color: string; badge: string }> = {
+  playbook: { icon: ListChecks, color: "text-[var(--text)]", badge: "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)]" },
+  vulnerability_writeup: { icon: Bug, color: "text-[var(--critical)]", badge: "bg-[var(--surface-2)] text-[var(--critical)] border-[var(--border)]" },
+  remediation_guide: { icon: Wrench, color: "text-[var(--low)]", badge: "bg-[var(--surface-2)] text-[var(--low)] border-[var(--border)]" },
+  organization_policy: { icon: Scale, color: "text-[var(--medium)]", badge: "bg-[var(--surface-2)] text-[var(--medium)] border-[var(--border)]" },
+  lessons_learned: { icon: Lightbulb, color: "text-[var(--high)]", badge: "bg-[var(--surface-2)] text-[var(--high)] border-[var(--border)]" },
 };
 
 function buildContent(category: string, values: Record<string, string | string[]>): string {
@@ -68,7 +83,8 @@ function buildContent(category: string, values: Record<string, string | string[]
 }
 
 function parseContent(content: string): { header: string; body: string; steps: string[] | null }[] {
-  const parts = content.split(/\n(?=## )/g).map((s) => s.trim()).filter(Boolean);
+  const cleaned = (content || "").replace(/^#[^#\n].*\n*/, "").trim();
+  const parts = cleaned.split(/\n(?=## )/g).map((s) => s.trim()).filter(Boolean);
   if (parts.length === 0 || !parts[0].startsWith("## ")) {
     return [{ header: "", body: content, steps: null }];
   }
@@ -82,13 +98,23 @@ function parseContent(content: string): { header: string; body: string; steps: s
   });
 }
 
-function StepsInput({ values, onChange, placeholder }: { values: string[]; onChange: (v: string[]) => void; placeholder?: string }) {
+function StepsInput({
+  values,
+  onChange,
+  placeholder,
+}: {
+  values: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+}) {
   const list = values.length > 0 ? values : [""];
   return (
     <div className="space-y-2">
       {list.map((v, i) => (
         <div key={i} className="flex items-center gap-2">
-          <span className="text-xs text-[var(--text-dim)] w-5 shrink-0">{i + 1}.</span>
+          <span className="text-xs font-mono-data text-[var(--text-dim)] w-5 shrink-0">
+            {i + 1}.
+          </span>
           <Input
             value={v}
             placeholder={placeholder}
@@ -97,17 +123,25 @@ function StepsInput({ values, onChange, placeholder }: { values: string[]; onCha
               next[i] = e.target.value;
               onChange(next);
             }}
-            className="w-full"
+            className="w-full text-xs font-mono-data"
           />
           {list.length > 1 && (
-            <button type="button" onClick={() => onChange(list.filter((_, idx) => idx !== i))} className="text-[var(--text-dim)] hover:text-[var(--critical)] shrink-0">
-              <X size={14} />
+            <button
+              type="button"
+              onClick={() => onChange(list.filter((_, idx) => idx !== i))}
+              className="p-1 text-[var(--text-dim)] hover:text-[var(--critical)] rounded transition-colors cursor-pointer shrink-0"
+            >
+              <X size={15} />
             </button>
           )}
         </div>
       ))}
-      <button type="button" onClick={() => onChange([...list, ""])} className="text-xs text-[var(--brand)] hover:underline flex items-center gap-1">
-        <Plus size={12} /> Add step
+      <button
+        type="button"
+        onClick={() => onChange([...list, ""])}
+        className="text-xs font-mono-data text-[var(--brand)] hover:underline flex items-center gap-1.5 pt-1 cursor-pointer"
+      >
+        <Plus size={13} /> Add next step
       </button>
     </div>
   );
@@ -115,6 +149,8 @@ function StepsInput({ values, onChange, placeholder }: { values: string[]; onCha
 
 export default function KnowledgePage() {
   const [docs, setDocs] = useState<KnowledgeDoc[]>([]);
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<"manual" | "upload">("manual");
   const [file, setFile] = useState<File | null>(null);
@@ -169,161 +205,323 @@ export default function KnowledgePage() {
   }
 
   async function removeDoc(id: number) {
-    if (!confirm("Delete this document? The AI assistant will no longer be able to retrieve it.")) return;
+    if (!confirm("Delete this knowledge document? The AI assistant will no longer be able to retrieve it.")) return;
     await api.del(`/knowledge/${id}`);
     setSelected(null);
     load();
   }
 
+  const filteredDocs = docs.filter((d) => {
+    const matchesCat = !selectedCategory || d.category === selectedCategory;
+    const matchesSearch =
+      !search.trim() ||
+      d.title.toLowerCase().includes(search.toLowerCase()) ||
+      d.category.toLowerCase().includes(search.toLowerCase());
+    return matchesCat && matchesSearch;
+  });
+
   const schema = CATEGORY_SCHEMAS[category] || [];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Title & Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold">Knowledge Base</h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">Internal playbooks and guides — indexed for the AI assistant to retrieve</p>
+          <h1 className="text-xl font-bold tracking-tight text-[var(--text)]">
+            Intelligence Knowledge Base
+          </h1>
+          <p className="text-xs text-[var(--text-muted)] mt-1">
+            Standard operating procedures, playbooks, and mitigation guides indexed for the RAG assistant
+          </p>
         </div>
-        <Button onClick={() => setShowForm((s) => !s)} className="flex items-center gap-2">
-          <Plus size={14} /> New Document
+        <Button
+          onClick={() => setShowForm((s) => !s)}
+          variant={showForm ? "secondary" : "primary"}
+          size="sm"
+          icon={Plus}
+        >
+          {showForm ? "Cancel" : "Add Knowledge Doc"}
         </Button>
       </div>
 
+      {/* Filter and Search Bar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-[5px] p-1 overflow-x-auto">
+          <button
+            onClick={() => setSelectedCategory("")}
+            className={`px-2.5 py-1 rounded-[4px] text-xs transition-colors cursor-pointer ${
+              selectedCategory === ""
+                ? "bg-[var(--surface-2)] text-[var(--text)] font-medium border border-[var(--border-strong)]"
+                : "text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-transparent"
+            }`}
+          >
+            All docs ({docs.length})
+          </button>
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.value}
+              onClick={() => setSelectedCategory(cat.value)}
+              className={`px-2.5 py-1 rounded-[4px] text-xs transition-colors cursor-pointer ${
+                selectedCategory === cat.value
+                  ? "bg-[var(--surface-2)] text-[var(--text)] font-medium border border-[var(--border-strong)]"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-transparent"
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 min-w-[200px]">
+          <SearchInput
+            placeholder="Search documents by title..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onClear={() => setSearch("")}
+          />
+        </div>
+      </div>
+
+      {/* Form for manual write or file upload */}
       {showForm && (
-        <Card>
+        <Card
+          header="Add New Knowledge Base Document"
+          subtitle="Documents are parsed, chunked, and embedded into local TF-IDF vector index"
+        >
           <form onSubmit={create} className="space-y-4">
             <div className="flex gap-2 border-b border-[var(--border)] pb-3">
-              <Button type="button" variant={formMode === "manual" ? "secondary" : "ghost"} onClick={() => setFormMode("manual")}>
-                <Plus size={13} className="inline mr-1" /> Write Document
+              <Button
+                type="button"
+                variant={formMode === "manual" ? "primary" : "secondary"}
+                size="sm"
+                icon={Plus}
+                onClick={() => setFormMode("manual")}
+              >
+                Structured Authoring
               </Button>
-              <Button type="button" variant={formMode === "upload" ? "secondary" : "ghost"} onClick={() => setFormMode("upload")}>
-                <Upload size={13} className="inline mr-1" /> Upload File
+              <Button
+                type="button"
+                variant={formMode === "upload" ? "primary" : "secondary"}
+                size="sm"
+                icon={Upload}
+                onClick={() => setFormMode("upload")}
+              >
+                Upload File (DOCX, PDF, MD)
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-[var(--text-muted)] block mb-1">Title</label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} required={formMode === "manual"} placeholder={formMode === "upload" ? "Optional — defaults to filename" : undefined} className="w-full" />
+                <label className="text-xs font-semibold text-[var(--text)] block mb-1.5">
+                  Document Title
+                </label>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required={formMode === "manual"}
+                  placeholder={formMode === "upload" ? "Optional (defaults to filename)" : "e.g. Critical RCE Response Playbook"}
+                  className="w-full text-xs"
+                />
               </div>
               <div>
-                <label className="text-xs text-[var(--text-muted)] block mb-1">Document Type</label>
-                <Select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full">
-                  {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                <label className="text-xs font-semibold text-[var(--text)] block mb-1.5">
+                  Knowledge Classification
+                </label>
+                <Select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full text-xs font-mono-data"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
                 </Select>
               </div>
             </div>
 
             {formMode === "upload" ? (
               <div className="space-y-3">
-                <div>
-                  <label className="text-xs text-[var(--text-muted)] block mb-1">Document file</label>
+                <div className="border border-dashed border-[var(--border)] rounded-[5px] p-3 transition-colors bg-[var(--surface-2)]">
                   <Input
                     type="file"
                     accept=".docx,.pdf,.md,.markdown,.txt"
                     required
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="w-full file:mr-3 file:border-0 file:bg-[var(--surface-3)] file:text-[var(--text)] file:px-2 file:py-1 file:rounded"
+                    className="w-full text-xs text-[var(--text-muted)] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--surface-3)] file:text-[var(--text)] file:text-xs cursor-pointer"
                   />
-                  <div className="text-[11px] text-[var(--text-dim)] mt-1">DOCX, PDF, Markdown, or TXT · 10 MB maximum. Text is extracted, chunked, and indexed automatically.</div>
+                  <p className="text-[11px] text-[var(--text-dim)] mt-2">
+                    Accepts DOCX, PDF, Markdown, or Plain Text up to 10 MB. Ingests full text into the offline assistant index.
+                  </p>
                 </div>
                 <div>
-                  <label className="text-xs text-[var(--text-muted)] block mb-1">Tags <span className="text-[var(--text-dim)]">(comma-separated)</span></label>
-                  <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="incident-response, linux, access-control" className="w-full" />
+                  <label className="text-xs font-semibold text-[var(--text)] block mb-1.5">
+                    Metadata Tags (comma-separated)
+                  </label>
+                  <Input
+                    value={tags}
+                    onChange={(e) => setTags(e.target.value)}
+                    placeholder="incident-response, linux, rce, privilege-escalation"
+                    className="w-full text-xs font-mono-data"
+                  />
                 </div>
               </div>
-            ) : schema.map((f) => (
-              <div key={f.key}>
-                <label className="text-xs text-[var(--text-muted)] block mb-1">{f.label}</label>
-                {f.type === "steps" ? (
-                  <StepsInput
-                    values={(fieldValues[f.key] as string[]) || []}
-                    onChange={(v) => setFieldValues((prev) => ({ ...prev, [f.key]: v }))}
-                    placeholder={f.placeholder}
-                  />
-                ) : (
-                  <textarea
-                    value={(fieldValues[f.key] as string) || ""}
-                    onChange={(e) => setFieldValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                    placeholder={f.placeholder}
-                    required
-                    rows={3}
-                    className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--brand)]"
-                  />
-                )}
-              </div>
-            ))}
+            ) : (
+              schema.map((f) => (
+                <div key={f.key}>
+                  <label className="text-xs font-semibold text-[var(--text)] block mb-1.5">
+                    {f.label}
+                  </label>
+                  {f.type === "steps" ? (
+                    <StepsInput
+                      values={(fieldValues[f.key] as string[]) || []}
+                      onChange={(v) => setFieldValues((prev) => ({ ...prev, [f.key]: v }))}
+                      placeholder={f.placeholder}
+                    />
+                  ) : (
+                    <textarea
+                      value={(fieldValues[f.key] as string) || ""}
+                      onChange={(e) => setFieldValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                      placeholder={f.placeholder}
+                      required
+                      rows={3}
+                      className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-[5px] px-3 py-2 text-xs text-[var(--text)] focus:border-[var(--accent)] focus:outline-none transition-colors"
+                    />
+                  )}
+                </div>
+              ))
+            )}
 
-            <Button type="submit" disabled={busy}>{busy ? (formMode === "upload" ? "Uploading..." : "Saving...") : (formMode === "upload" ? "Upload and Index" : "Save Document")}</Button>
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={busy} variant="primary" size="sm">
+                {busy
+                  ? formMode === "upload"
+                    ? "Chunking & Indexing..."
+                    : "Saving..."
+                  : formMode === "upload"
+                  ? "Upload & Index Knowledge"
+                  : "Save Knowledge Document"}
+              </Button>
+            </div>
           </form>
         </Card>
       )}
 
-      {docs.length === 0 ? (
-        <Card><EmptyState title="No knowledge base documents yet" hint="Add playbooks and remediation guides so the AI assistant can retrieve them." /></Card>
+      {/* Document Grid */}
+      {filteredDocs.length === 0 ? (
+        <Card>
+          <EmptyState
+            title="No knowledge base documents match your filter"
+            hint="Add remediation playbooks and security policies so your team and the AI assistant can reference them."
+          />
+        </Card>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
-          {docs.map((d) => {
-            const meta = CATEGORY_META[d.category] || { icon: BookOpen, color: "text-[var(--brand)]" };
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredDocs.map((d) => {
+            const meta = CATEGORY_META[d.category] || {
+              icon: BookOpen,
+              color: "text-[var(--text)]",
+              badge: "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)]",
+            };
             const Icon = meta.icon;
             return (
-              <button key={d.id} onClick={() => openDoc(d.id)} className="text-left bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 hover:border-[var(--brand)] transition-colors">
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon size={14} className={meta.color} />
-                  <span className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{d.category.replace("_", " ")}</span>
+              <button
+                key={d.id}
+                onClick={() => openDoc(d.id)}
+                className="text-left bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-strong)] rounded-[5px] p-3.5 transition-colors flex flex-col justify-between cursor-pointer"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono-data font-bold uppercase border ${meta.badge}`}
+                    >
+                      <Icon size={12} className={meta.color} />
+                      {d.category.replace("_", " ")}
+                    </span>
+                    <span className="text-[11px] font-mono-data text-[var(--text-dim)]">
+                      {new Date(d.updated_at).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <h3 className="font-semibold text-sm text-[var(--text)] group-hover:text-[var(--brand)] transition-colors leading-snug">
+                    {d.title}
+                  </h3>
                 </div>
-                <div className="text-sm font-medium">{d.title}</div>
-                <div className="text-xs text-[var(--text-dim)] mt-2">{d.source_filename || d.created_by} · {d.indexed_chunk_count || 0}/{d.chunk_count || 0} chunks indexed · {new Date(d.updated_at).toLocaleDateString()}</div>
+
+                <div className="pt-3 mt-3 border-t border-[var(--border-soft)] flex items-center justify-between text-xs font-mono-data text-[var(--text-dim)]">
+                  <span>Author: {d.source_filename || d.created_by || "System"}</span>
+                  <span>
+                    Indexed: <strong className="text-[var(--text)]">{d.indexed_chunk_count || 0}</strong>/{d.chunk_count || 0} chunks
+                  </span>
+                </div>
               </button>
             );
           })}
         </div>
       )}
 
-      {selected && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-8" onClick={() => setSelected(null)}>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between mb-1">
-              <div className="flex items-center gap-2">
-                {(() => {
-                  const meta = CATEGORY_META[selected.category] || { icon: BookOpen, color: "text-[var(--brand)]" };
-                  const Icon = meta.icon;
-                  return <Icon size={16} className={meta.color} />;
-                })()}
-                <span className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{selected.category.replace("_", " ")}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <button onClick={() => removeDoc(selected.id)} className="text-[var(--text-muted)] hover:text-[var(--critical)]" title="Delete document">
-                  <Trash2 size={16} />
-                </button>
-                <button onClick={() => setSelected(null)} className="text-[var(--text-muted)] hover:text-[var(--text)]">✕</button>
-              </div>
-            </div>
-            <h2 className="text-lg font-bold mb-4">{selected.title}</h2>
-
-            <div className="space-y-5">
-              {parseContent(selected.content).map((section, i) => (
-                <div key={i}>
-                  {section.header && (
-                    <div className="text-xs font-semibold uppercase tracking-wide text-[var(--brand)] mb-2">{section.header}</div>
-                  )}
-                  {section.steps ? (
-                    <ol className="relative border-l border-[var(--border)] ml-2 space-y-3">
-                      {section.steps.map((step, si) => (
-                        <li key={si} className="pl-4 relative">
-                          <span className="absolute -left-[7px] top-0.5 w-3 h-3 rounded-full bg-[var(--brand)] border-2 border-[var(--surface)]" />
-                          <span className="text-sm text-[var(--text)]">{step}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <div className="text-sm whitespace-pre-wrap text-[var(--text-muted)]">{section.body}</div>
-                  )}
+      {/* Document Reader Drawer */}
+      <Drawer
+        isOpen={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        width="640px"
+        title={
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              {selected && (
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10.5px] font-mono-data uppercase font-bold text-[var(--brand)]">
+                    [{selected.category.replace("_", " ")}]
+                  </span>
                 </div>
-              ))}
+              )}
+              <h2 className="text-base font-bold text-[var(--text)] leading-snug">
+                {selected?.title}
+              </h2>
             </div>
+            {selected && (
+              <button
+                onClick={() => removeDoc(selected.id)}
+                className="p-1.5 text-[var(--text-dim)] hover:text-[var(--critical)] rounded-lg hover:bg-[var(--surface-2)] transition-colors cursor-pointer"
+                title="Delete document"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
           </div>
-        </div>
-      )}
+        }
+      >
+        {selected && (
+          <div className="space-y-6">
+            {parseContent(selected.content).map((section, i) => (
+              <div key={i} className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[5px] p-3 text-xs">
+                {section.header && (
+                  <h4 className="text-xs font-mono-data uppercase font-bold text-[var(--brand)] tracking-wider mb-2.5">
+                    {section.header}
+                  </h4>
+                )}
+                {section.steps ? (
+                  <ol className="space-y-2.5 pl-1">
+                    {section.steps.map((step, si) => (
+                      <li key={si} className="flex items-start gap-2.5 text-xs font-mono-data text-[var(--text)] leading-relaxed">
+                        <span className="w-5 h-5 rounded-md bg-[var(--surface-3)] border border-[var(--border)] flex items-center justify-center font-bold text-[10px] text-[var(--brand)] shrink-0 mt-0.5">
+                          {si + 1}
+                        </span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <div className="text-xs text-[var(--text)] leading-relaxed whitespace-pre-wrap font-sans">
+                    {section.body}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 }

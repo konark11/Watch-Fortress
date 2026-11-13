@@ -11,10 +11,11 @@ types supported by both engines.
 from __future__ import annotations
 import os
 import enum
+import uuid
 from datetime import datetime, timezone
 from sqlalchemy import (
     create_engine, Column, Integer, String, Float, Boolean, DateTime, Text,
-    ForeignKey, JSON, Enum as SAEnum, UniqueConstraint
+    ForeignKey, JSON, Enum as SAEnum, UniqueConstraint, Index
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
@@ -140,6 +141,72 @@ class ScanStatus(str, enum.Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+
+
+class BackgroundJobState(str, enum.Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    RETRYING = "retrying"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    DEAD_LETTER = "dead_letter"
+
+
+class BackgroundJob(Base):
+    __tablename__ = "background_jobs"
+    id = Column(Integer, primary_key=True)
+    public_id = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
+    job_type = Column(String(80), nullable=False, index=True)
+    state = Column(SAEnum(BackgroundJobState), nullable=False, default=BackgroundJobState.QUEUED, index=True)
+    payload = Column(JSON, nullable=False, default=dict)
+    result_summary = Column(JSON, nullable=True)
+    creator_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    creator_username = Column(String(80), nullable=True)
+    scan_id = Column(Integer, ForeignKey("scans.id"), nullable=True, index=True)
+    idempotency_key = Column(String(255), nullable=False)
+    correlation_id = Column(String(64), nullable=False, index=True)
+    attempt_count = Column(Integer, nullable=False, default=0)
+    max_attempts = Column(Integer, nullable=False, default=3)
+    available_at = Column(DateTime, nullable=False, default=now_utc, index=True)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    lease_owner = Column(String(120), nullable=True)
+    lease_expires_at = Column(DateTime, nullable=True, index=True)
+    heartbeat_at = Column(DateTime, nullable=True)
+    progress_pct = Column(Integer, nullable=False, default=0)
+    progress_message = Column(String(500), nullable=True)
+    cancellation_requested_at = Column(DateTime, nullable=True)
+    error_code = Column(String(80), nullable=True)
+    error_message = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=now_utc, nullable=False)
+    updated_at = Column(DateTime, default=now_utc, onupdate=now_utc, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("job_type", "idempotency_key", name="uq_background_job_idempotency"),
+        Index("ix_background_jobs_ready", "state", "available_at"),
+    )
+
+
+class BackgroundJobEvent(Base):
+    __tablename__ = "background_job_events"
+    id = Column(Integer, primary_key=True)
+    job_id = Column(Integer, ForeignKey("background_jobs.id", ondelete="CASCADE"), nullable=False, index=True)
+    timestamp = Column(DateTime, default=now_utc, nullable=False, index=True)
+    state = Column(SAEnum(BackgroundJobState), nullable=False)
+    progress_pct = Column(Integer, nullable=True)
+    message = Column(String(500), nullable=False)
+    details = Column(JSON, nullable=True)
+    correlation_id = Column(String(64), nullable=False, index=True)
+
+
+class WorkerHeartbeat(Base):
+    __tablename__ = "worker_heartbeats"
+    id = Column(Integer, primary_key=True)
+    worker_id = Column(String(160), unique=True, nullable=False, index=True)
+    last_seen_at = Column(DateTime, nullable=False, index=True)
+    status = Column(String(30), nullable=False, default="alive")
+    updated_at = Column(DateTime, default=now_utc, nullable=False)
 
 
 class Scan(Base):
@@ -359,9 +426,116 @@ class ThreatIOC(Base):
     created_at = Column(DateTime, default=now_utc)
 
 
+# ---------------------------------------------------------------------------
+# Assistant conversations, explicit memory, and retention audit
+# ---------------------------------------------------------------------------
+class ConversationStatus(str, enum.Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+    DELETED = "deleted"
+
+
+class AssistantRole(str, enum.Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+
+
+class MemoryScope(str, enum.Enum):
+    USER = "user"
+    CONVERSATION = "conversation"
+
+
+class MemoryCreationMethod(str, enum.Enum):
+    USER_CREATED = "user_created"
+    REVIEWED_EXTRACTION = "reviewed_extraction"
+
+
+class RetentionEventType(str, enum.Enum):
+    POLICY_SET = "policy_set"
+    EXPORT_REQUESTED = "export_requested"
+    MESSAGE_DELETED = "message_deleted"
+    CONVERSATION_DELETED = "conversation_deleted"
+    MEMORY_DELETED = "memory_deleted"
+    PURGE_COMPLETED = "purge_completed"
+
+
+class AssistantConversation(Base):
+    __tablename__ = "assistant_conversations"
+    id = Column(Integer, primary_key=True)
+    public_id = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
+    owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String(255), nullable=False, default="New conversation")
+    status = Column(SAEnum(ConversationStatus), nullable=False, default=ConversationStatus.ACTIVE, index=True)
+    retention_policy_version = Column(String(80), nullable=False, default="default-v1")
+    metadata_json = Column("metadata", JSON, nullable=False, default=dict)
+    created_at = Column(DateTime, default=now_utc, nullable=False, index=True)
+    updated_at = Column(DateTime, default=now_utc, onupdate=now_utc, nullable=False)
+    last_message_at = Column(DateTime, nullable=True, index=True)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    deleted_at = Column(DateTime, nullable=True, index=True)
+
+
+class AssistantMessage(Base):
+    __tablename__ = "assistant_messages"
+    id = Column(Integer, primary_key=True)
+    public_id = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
+    conversation_id = Column(Integer, ForeignKey("assistant_conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    sequence = Column(Integer, nullable=False)
+    role = Column(SAEnum(AssistantRole), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    citations = Column(JSON, nullable=True)
+    provider = Column(String(120), nullable=True)
+    model = Column(String(255), nullable=True)
+    generation_metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=now_utc, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    deleted_at = Column(DateTime, nullable=True, index=True)
+    __table_args__ = (
+        UniqueConstraint("conversation_id", "sequence", name="uq_assistant_message_sequence"),
+        Index("ix_assistant_messages_conversation_order", "conversation_id", "sequence"),
+    )
+
+
+class AssistantMemory(Base):
+    __tablename__ = "assistant_memories"
+    id = Column(Integer, primary_key=True)
+    public_id = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
+    owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    conversation_id = Column(Integer, ForeignKey("assistant_conversations.id", ondelete="SET NULL"), nullable=True, index=True)
+    memory_type = Column(String(80), nullable=False)
+    content = Column(Text, nullable=False)
+    source_message_id = Column(Integer, ForeignKey("assistant_messages.id", ondelete="SET NULL"), nullable=True, index=True)
+    scope = Column(SAEnum(MemoryScope), nullable=False, index=True)
+    creation_method = Column(SAEnum(MemoryCreationMethod), nullable=False)
+    confidence = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=now_utc, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    deleted_at = Column(DateTime, nullable=True, index=True)
+    active = Column(Boolean, nullable=False, default=True, index=True)
+
+
+class RetentionEvent(Base):
+    __tablename__ = "retention_events"
+    id = Column(Integer, primary_key=True)
+    subject_type = Column(String(80), nullable=False, index=True)
+    subject_public_id = Column(String(36), nullable=False, index=True)
+    event_type = Column(SAEnum(RetentionEventType), nullable=False, index=True)
+    actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    timestamp = Column(DateTime, default=now_utc, nullable=False, index=True)
+    details = Column(JSON, nullable=False, default=dict)
+
+
 def init_db():
     os.makedirs(os.path.join(os.path.dirname(__file__), "..", "data"), exist_ok=True)
-    Base.metadata.create_all(bind=engine)
+    from migrations import migrate
+    if DATABASE_URL.startswith("sqlite"):
+        migrate()
+    elif os.environ.get("VULN_AUTO_MIGRATE", "").lower() in {"1", "true", "yes"}:
+        migrate()
+    else:
+        from migrations import verify_current
+        verify_current()
 
 
 def get_db():

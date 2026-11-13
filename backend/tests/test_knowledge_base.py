@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from knowledge.mapper import kb
 from rag.corpus import build_corpus
-from rag.retriever import TfidfRetriever
+from rag.retriever import TfidfRetriever, VectorRetriever
 from rag.embeddings import embed_text, EMBEDDING_DIMENSIONS
 
 
@@ -66,3 +66,17 @@ def test_deterministic_embedding_generation():
     # Check that vector is normalized (unit length approximately 1.0)
     norm = sum(v * v for v in vector) ** 0.5
     assert abs(norm - 1.0) < 1e-4
+
+
+def test_vector_retriever_rejects_mixed_dimensions():
+    retriever = VectorRetriever()
+    try:
+        retriever.index(
+            [{"id": "a", "text": "a"}, {"id": "b", "text": "b"}],
+            embeddings=[[1.0, 0.0], [1.0, 0.0, 0.0]],
+            embedder=lambda texts: [[1.0, 0.0] for _ in texts],
+        )
+    except ValueError as exc:
+        assert "Mixed embedding dimensions" in str(exc)
+    else:
+        raise AssertionError("mixed dimensions must be rejected")

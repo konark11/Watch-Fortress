@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldAlert } from "lucide-react";
+import { User, Lock, Mail, ArrowRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api, ApiError } from "../api/client";
 import { Button, Input } from "../components/ui";
@@ -37,7 +37,7 @@ export default function LoginPage() {
       await login(username, password);
       navigate("/");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong");
+      setError(err instanceof ApiError ? err.message : "Authentication failed");
     } finally {
       setBusy(false);
     }
@@ -46,40 +46,105 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] px-4">
       <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-[var(--brand-dim)] flex items-center justify-center mb-3">
-            <ShieldAlert size={24} className="text-[var(--brand)]" />
-          </div>
-          <div className="font-bold text-lg">Watch Fortress</div>
-          <div className="text-xs text-[var(--text-dim)] uppercase tracking-wider mt-1">
-            {needsBootstrap ? "Create the administrator account" : "Sign in to continue"}
-          </div>
+        {/* Fortress Plain Wordmark */}
+        <div className="text-center mb-6">
+          <h1 className="font-semibold text-lg text-[var(--text)] tracking-tight">
+            Watch Fortress
+          </h1>
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
+            Vulnerability management console
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 space-y-4">
-          <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5">Username</label>
-            <Input value={username} onChange={(e) => setUsername(e.target.value)} required className="w-full" autoFocus />
+        {/* Auth Form Card */}
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[5px] p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-medium text-[var(--text)]">
+              {needsBootstrap ? "Initialize administrator account" : "Sign in"}
+            </h2>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+              {needsBootstrap
+                ? "First-run setup: Create root credentials"
+                : "Enter credentials to access the console"}
+            </p>
           </div>
-          {needsBootstrap && (
-            <div>
-              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Email (optional)</label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" />
-            </div>
-          )}
-          <div>
-            <label className="block text-xs text-[var(--text-muted)] mb-1.5">Password</label>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full" />
-          </div>
-          {error && <div className="text-xs text-[var(--critical)] bg-[var(--critical-dim)] rounded-lg px-3 py-2">{error}</div>}
-          <Button type="submit" disabled={busy} className="w-full">
-            {busy ? "Please wait..." : needsBootstrap ? "Create Admin Account" : "Sign In"}
-          </Button>
-        </form>
 
-        <p className="text-center text-[11px] text-[var(--text-dim)] mt-5">
-          Runs fully self-hosted · No external accounts required
-        </p>
+          <form onSubmit={handleSubmit} className="space-y-3.5">
+            <div>
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">
+                Username
+              </label>
+              <div className="relative flex items-center">
+                <User size={13} className="absolute left-2.5 text-[var(--text-tertiary)] pointer-events-none" />
+                <Input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  placeholder="admin"
+                  className="pl-8"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {needsBootstrap && (
+              <div>
+                <label className="block text-xs font-medium text-[var(--text)] mb-1">
+                  Email (optional)
+                </label>
+                <div className="relative flex items-center">
+                  <Mail size={13} className="absolute left-2.5 text-[var(--text-tertiary)] pointer-events-none" />
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@internal.local"
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-medium text-[var(--text)] mb-1">
+                Password
+              </label>
+              <div className="relative flex items-center">
+                <Lock size={13} className="absolute left-2.5 text-[var(--text-tertiary)] pointer-events-none" />
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••••••"
+                  className="pl-8"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="text-xs text-[var(--critical)] bg-[var(--critical-dim)] border border-transparent rounded-[4px] px-2.5 py-1.5 font-mono-data">
+                {error}
+              </div>
+            )}
+
+            <div className="pt-1">
+              <Button
+                type="submit"
+                disabled={busy}
+                variant="primary"
+                className="w-full"
+                icon={ArrowRight}
+              >
+                {busy ? "Authenticating..." : needsBootstrap ? "Create account" : "Sign in"}
+              </Button>
+            </div>
+          </form>
+        </div>
+
+        <div className="mt-4 text-center text-[11px] text-[var(--text-tertiary)]">
+          Air-gapped operation · Audit logged
+        </div>
       </div>
     </div>
   );
