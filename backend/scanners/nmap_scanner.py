@@ -17,13 +17,13 @@ from typing import Callable, Optional
 from scanners.base import ScannerBackend, ScannerCancelled
 
 PROFILE_FLAGS = {
-    "quick": ["-T4", "-F"],
-    "full": ["-T4", "-p-"],
-    "all_ports": ["-T4", "-p-"],
-    "all_ports_service_version": ["-T4", "-p-", "-sV"],
-    "service_version": ["-T4", "-sV", "--top-ports", "100"],
-    "os_detection": ["-T4", "-O", "--top-ports", "50"],
-    "vuln_scripts": ["-T4", "-sV", "--script", "vulners,ssl-cert", "--top-ports", "100"],
+    "quick": ["-T4", "-n", "-F", "--min-rate", "300"],
+    "full": ["-T4", "-n", "-sV", "--top-ports", "1000", "--min-rate", "300", "--host-timeout", "10m"],
+    "all_ports": ["-T4", "-n", "-p-", "--min-rate", "300", "--host-timeout", "15m"],
+    "all_ports_service_version": ["-T4", "-n", "-p-", "-sV", "--min-rate", "300", "--host-timeout", "15m"],
+    "service_version": ["-T4", "-n", "-sV", "--top-ports", "100", "--min-rate", "300", "--host-timeout", "5m"],
+    "os_detection": ["-T4", "-n", "-O", "--top-ports", "50", "--min-rate", "300", "--host-timeout", "5m"],
+    "vuln_scripts": ["-T4", "-n", "-sV", "--script", "vulners,ssl-cert", "--script-timeout", "30s", "--top-ports", "100", "--min-rate", "300", "--host-timeout", "5m"],
 }
 
 
@@ -38,7 +38,9 @@ class NmapScanner(ScannerBackend):
             raise RuntimeError("nmap binary not found on this system. Install nmap or use file import instead.")
 
         profile = options.get("profile", "service_version")
-        flags = PROFILE_FLAGS.get(profile, PROFILE_FLAGS["service_version"])
+        flags = list(PROFILE_FLAGS.get(profile, PROFILE_FLAGS["service_version"]))
+        if options.get("resolve_dns", False) and "-n" in flags:
+            flags.remove("-n")
 
         if on_progress:
             on_progress(5, f"Starting nmap ({profile} profile) against {target}")
@@ -47,12 +49,16 @@ class NmapScanner(ScannerBackend):
             out_path = tmp.name
 
         cmd = ["nmap", *flags, "-oX", out_path, target]
-        # Nmap scans, especially all 65,535 ports, may legitimately run for
-        # longer than a fixed application-level timeout.
+        timeout_limit = options.get("timeout_seconds", 1800)
+        start_time = time.monotonic()
+        last_pulse = start_time
+        deadline = start_time + timeout_limit
+
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         cancel_check = options.get("_cancel_check")
         try:
             while proc.poll() is None:
+                now = time.monotonic()
                 if callable(cancel_check) and cancel_check():
                     proc.terminate()
                     try:
@@ -61,8 +67,19 @@ class NmapScanner(ScannerBackend):
                         proc.kill()
                         proc.wait()
                     raise ScannerCancelled()
+                if now >= deadline:
+                    proc.kill()
+                    proc.wait()
+                    raise subprocess.TimeoutExpired(cmd, timeout_limit)
+                if on_progress and (now - last_pulse) >= 5:
+                    elapsed = int(now - start_time)
+                    est_pct = min(85, 5 + int((elapsed / timeout_limit) * 80))
+                    on_progress(est_pct, f"Nmap ({profile}) in progress against {target} ({elapsed}s elapsed)")
+                    last_pulse = now
                 time.sleep(0.5)
             stdout, stderr = proc.communicate()
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(f"nmap scan against {target} timed out")
         finally:
             if proc.poll() is None:
                 proc.kill()

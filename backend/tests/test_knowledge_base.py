@@ -80,3 +80,30 @@ def test_vector_retriever_rejects_mixed_dimensions():
         assert "Mixed embedding dimensions" in str(exc)
     else:
         raise AssertionError("mixed dimensions must be rejected")
+
+
+def test_newly_added_cves_and_juice_shop_in_kb():
+    target_cves = [
+        "CVE-2026-34197",
+        "CVE-2024-28752",
+        "CVE-2024-39907",
+        "CVE-2017-12636",
+        "CVE-2017-9993",
+    ]
+    for cve_id in target_cves:
+        assert cve_id in kb.cve_db, f"{cve_id} missing from cve_db"
+        meta = kb.cve_db[cve_id]
+        assert meta["cvss_v3"] > 0
+        assert meta["severity"].upper() in {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
+        assert len(meta["description"]) > 20
+        assert len(meta.get("references", [])) > 0
+
+    from knowledge.reference_docs import REFERENCE_DOCS
+    titles = [doc["title"] for doc in REFERENCE_DOCS]
+    assert any("Juice Shop" in t for t in titles)
+    assert any("CVE-2026-34197" in t for t in titles)
+    assert any("CVE-2024-28752" in t for t in titles)
+    assert any("CVE-2024-39907" in t for t in titles)
+    assert any("CVE-2017-12636" in t for t in titles)
+    assert any("CVE-2017-9993" in t for t in titles)
+

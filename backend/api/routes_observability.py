@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 import os
 import time
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import func, text
 
 from auth.security import get_current_user
-from models.database import BackgroundJob, BackgroundJobState, WorkerHeartbeat, User, get_db
+from models.database import BackgroundJob, BackgroundJobState, User, get_db
+from jobs.readiness import worker_readiness
 from observability import metrics_payload
 from rag.embeddings import active_embedding_metadata
 from rag.indexing.repository import latest_run
@@ -57,13 +57,13 @@ def summary(db=Depends(get_db), _: User = Depends(get_current_user)):
             index["capability"] = capability(db)
         except Exception:
             index["status"] = "unavailable"
-    stale_seconds = max(1, int(os.environ.get("WORKER_HEARTBEAT_STALE_SECONDS", "120")))
-    heartbeat = db.query(WorkerHeartbeat).order_by(WorkerHeartbeat.last_seen_at.desc()).first()
-    if heartbeat is None:
-        worker = {"status": "not_yet_checked", "last_seen_at": None}
-    else:
-        age = (datetime.now(timezone.utc) - heartbeat.last_seen_at.replace(tzinfo=timezone.utc)).total_seconds()
-        worker = {"status": "healthy" if age <= stale_seconds else "degraded", "last_seen_at": heartbeat.last_seen_at, "age_seconds": round(age), "stale_threshold_seconds": stale_seconds}
+    readiness = worker_readiness(db)
+    worker = {
+        **readiness,
+        "status": "healthy" if readiness["ready"] else (
+            "not_yet_checked" if readiness["last_seen_at"] is None else "degraded"
+        ),
+    }
     embedding = active_embedding_metadata()
     embedding_status = "degraded" if embedding.get("implementation") == "deterministic-token-hash" else "healthy"
     reranker = reranker_status()
@@ -90,7 +90,8 @@ def summary(db=Depends(get_db), _: User = Depends(get_current_user)):
 
 def _run_files():
     default_root = Path(__file__).resolve().parents[1] / "experiments" / "results"
-    root = Path(os.environ.get("RAG_EVALUATION_RESULTS_DIR", str(default_root)))
+    configured_root = Path(os.environ.get("RAG_EVALUATION_RESULTS_DIR", str(default_root)))
+    root = configured_root if configured_root.is_absolute() else Path(__file__).resolve().parents[2] / configured_root
     return sorted(root.glob("*.json")) if root.exists() else []
 
 
@@ -100,16 +101,22 @@ def evaluations(_: User = Depends(get_current_user)):
     for path in _run_files():
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
+            dataset = data.get("dataset") if isinstance(data.get("dataset"), dict) else {}
+            provenance = data.get("provenance") if isinstance(data.get("provenance"), dict) else {}
+            metrics = data.get("metrics") if isinstance(data.get("metrics"), dict) else {}
             runs.append({
                 "run_id": path.stem, "status": data.get("status", "FAILED"),
-                "purpose": data.get("run_purpose"), "split": data.get("dataset", {}).get("split"),
-                "rows": data.get("dataset", {}).get("rows"), "dataset_sha256": data.get("dataset", {}).get("sha256"),
-                "backend": data.get("provenance", {}).get("retrieval_backend"),
-                "index_run_id": data.get("provenance", {}).get("index_run_id"),
-                "models": {"embedding": data.get("provenance", {}).get("embedding_model"), "reranker": data.get("provenance", {}).get("reranker_model"), "generation": data.get("provenance", {}).get("generation")},
-                "parameters": data.get("provenance", {}).get("retrieval_parameters"),
-                "metrics": data.get("metrics"), "failures": len(data.get("failures", [])),
-                "fallback_count": data.get("fallback_count"), "timestamp": data.get("provenance", {}).get("timestamp"),
+                "purpose": data.get("run_purpose"), "split": dataset.get("split"),
+                "rows": dataset.get("rows"), "dataset_sha256": dataset.get("sha256"),
+                "backend": provenance.get("retrieval_backend"),
+                "index_run_id": provenance.get("index_run_id"),
+                "models": {"embedding": provenance.get("embedding_model"), "reranker": provenance.get("reranker_model"), "generation": provenance.get("generation")},
+                "parameters": provenance.get("retrieval_parameters"),
+                "metrics": metrics, "failures": len(data.get("failures", [])) if isinstance(data.get("failures"), list) else 0,
+                "fallback_count": data.get("fallback_count"),
+                "reranker_fallback_count": data.get("reranker_fallback_count"),
+                "index_state": provenance.get("index_state"),
+                "timestamp": provenance.get("timestamp"),
             })
         except (OSError, ValueError):
             runs.append({"run_id": path.stem, "status": "FAILED"})
@@ -121,7 +128,9 @@ def evaluation(run_id: str, _: User = Depends(get_current_user)):
     if Path(run_id).name != run_id or not run_id.endswith(".json"):
         run_id = f"{run_id}.json"
     default_root = Path(__file__).resolve().parents[1] / "experiments" / "results"
-    path = Path(os.environ.get("RAG_EVALUATION_RESULTS_DIR", str(default_root))) / run_id
+    configured_root = Path(os.environ.get("RAG_EVALUATION_RESULTS_DIR", str(default_root)))
+    root = configured_root if configured_root.is_absolute() else Path(__file__).resolve().parents[2] / configured_root
+    path = root / run_id
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Evaluation run not found")
     try:

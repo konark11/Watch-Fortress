@@ -1,4 +1,20 @@
 {
+  "CVE-2023-48795": {
+    "description": "The SSH transport protocol with certain OpenSSH extensions, found in OpenSSH before 9.6 and other products, allows remote attackers to bypass integrity checks such that some packets are omitted (from the extension negotiation message), and a client and server may consequently end up with a connection where security features (such as keystroke timing obfuscation or extension negotiation) are degraded or disabled. This prefix truncation attack is known as the Terrapin attack.",
+    "cvss_v3": 5.9,
+    "severity": "medium",
+    "cwe": [
+      "CWE-354"
+    ],
+    "published": "2023-12-18",
+    "vendor": "OpenSSH",
+    "product": "OpenSSH / SSH Transport Protocol (Terrapin Attack)",
+    "exploit_available": true,
+    "references": [
+      "https://terrapin-attack.com",
+      "https://nvd.nist.gov/vuln/detail/CVE-2023-48795"
+    ]
+  },
   "CVE-2024-3400": {
     "description": "A command injection vulnerability in the GlobalProtect feature of Palo Alto Networks PAN-OS software for specific PAN-OS versions and distinct feature configurations may enable an unauthenticated attacker to execute arbitrary code with root privileges on the firewall.",
     "cvss_v3": 10.0,
@@ -16,7 +32,7 @@
     ]
   },
   "CVE-2017-0144": {
-    "description": "The SMBv1 server in Microsoft Windows allows remote attackers to execute arbitrary code via crafted packets, aka 'Windows SMB Remote Code Execution Vulnerability'. This vulnerability is known as EternalBlue and was used in the WannaCry and NotPetya outbreaks.",
+    "description": "The SMBv1 server in Microsoft Windows allows remote attackers to execute arbitrary code via crafted packets, aka 'Windows SMB Remote Code Execution Vulnerability'. This vulnerability is known as EternalBlue and was used in the WannaCry and NotPetya outbreaks. The SMBv1 server in Microsoft Windows Vista SP2; Windows Server 2008 SP2 and R2 SP1; Windows 7 SP1; Windows 8.1; Windows Server 2012 Gold and R2; Windows RT 8.1; and Windows 10 Gold, 1511, and 1607; and Windows Server 2016 allows remote attackers to execute arbitrary code via crafted packets, aka \"Windows SMB Remote Code Execution Vulnerability.\" This vulnerability is different from those described in CVE-2017-0143, CVE-2017-0145, CVE-2017-0146, and CVE-2017-0148. The SMBv1 server in Microsoft Windows Vista SP2; Windows Server 2008 SP2 and R2 SP1; Windows 7 SP1; Windows 8.1; Windows Server 2012 Gold and R2; Windows RT 8.1; and Windows 10 Gold, 1511, and 1607; and Windows Server 2016 allows remote attackers to execute arbitrary code via crafted packets, aka \\\"Windows SMB Remote Code Execution Vulnerability.\\\" This vulnerability is different from those described in CVE-2017-0143, CVE-2017-0145, CVE-2017-0146, and CVE-2017-0148.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -63,7 +79,7 @@
     ]
   },
   "CVE-2021-44228": {
-    "description": "Apache Log4j2 JNDI features used in configuration, log messages, and parameters do not protect against attacker-controlled LDAP and other JNDI related endpoints, allowing an attacker to execute arbitrary code (Log4Shell).",
+    "description": "Apache Log4j2 JNDI features used in configuration, log messages, and parameters do not protect against attacker-controlled LDAP and other JNDI related endpoints, allowing an attacker to execute arbitrary code (Log4Shell). Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints.",
     "cvss_v3": 10.0,
     "severity": "critical",
     "cwe": [
@@ -398,7 +414,7 @@
     ]
   },
   "CVE-2016-3081": {
-    "description": "Apache Struts contains a command injection vulnerability that could allow remote attackers to execute arbitrary code via method:prefix when Dynamic Method Invocation is enabled.",
+    "description": "Apache Struts contains a command injection vulnerability that could allow remote attackers to execute arbitrary code via method:prefix when Dynamic Method Invocation is enabled. Apache Struts 2.3.19 to 2.3.20.2, 2.3.21 to 2.3.24.1, and 2.3.25 to 2.3.28, when Dynamic Method Invocation is enabled, allow remote attackers to execute arbitrary code via method: prefix, related to chained expressions.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -3160,11 +3176,12 @@
     ]
   },
   "CVE-2026-34197": {
-    "description": "Apache ActiveMQ contains an improper input validation vulnerability that allows for code injection.",
-    "cvss_v3": 8.5,
+    "description": "Apache ActiveMQ Classic Jolokia JMX-HTTP bridge (/api/jolokia/) contains an improper input validation and code injection vulnerability allowing unauthenticated remote code execution via ResourceXmlApplicationContext loading from a crafted brokerConfig URI. Because Spring's ResourceXmlApplicationContext instantiates all singleton beans before the BrokerService validates the configuration, arbitrary code execution occurs on the broker's JVM through bean factory methods such as Runtime.exec().",
+    "cvss_v3": 8.8,
     "severity": "high",
     "cwe": [
       "CWE-20",
+      "CWE-78",
       "CWE-94"
     ],
     "published": "2026-04-16",
@@ -3174,6 +3191,74 @@
     "references": [
       "https://activemq.apache.org/security-advisories.data/CVE-2026-34197-announcement.txt",
       "https://nvd.nist.gov/vuln/detail/CVE-2026-34197"
+    ]
+  },
+  "CVE-2024-28752": {
+    "description": "Server-Side Request Forgery (SSRF) in Apache CXF Aegis DataBinding module allows remote attackers to force the server into making arbitrary outbound HTTP/TCP requests by sending crafted parameters utilizing XML-binary Optimized Packaging (XOP) href references.",
+    "cvss_v3": 9.3,
+    "severity": "critical",
+    "cwe": [
+      "CWE-918"
+    ],
+    "published": "2024-03-20",
+    "vendor": "Apache",
+    "product": "CXF",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2024-28752",
+      "https://cxf.apache.org/security-advisories.data/CVE-2024-28752.txt.asc",
+      "https://lists.apache.org/thread/9b59j4yp63j3n2z2w8385z0d8y9nff3v"
+    ]
+  },
+  "CVE-2024-39907": {
+    "description": "SQL Injection in FIT2CLOUD 1Panel before v1.10.12-lts allows remote attackers to execute arbitrary SQL commands and achieve remote code execution via unsanitized orderBy parameters in /api/v1/hosts/command/search and database query handlers passed into ORM Order functions. There are many sql injections in the project, and some of them are not well filtered, leading to arbitrary file writes, and ultimately leading to RCEs.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-89"
+    ],
+    "published": "2024-07-08",
+    "vendor": "FIT2CLOUD",
+    "product": "1Panel",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2024-39907",
+      "https://github.com/1Panel-dev/1Panel/security/advisories/GHSA-c48g-927v-fmg9",
+      "https://github.com/1Panel-dev/1Panel/releases/tag/v1.10.12-lts"
+    ]
+  },
+  "CVE-2017-12636": {
+    "description": "Command injection and privilege escalation vulnerability in Apache CouchDB before 1.7.0 and 2.x before 2.1.1 allows administrative users (or attackers leveraging companion flaw CVE-2017-12635) to execute arbitrary shell commands with couchdb daemon privileges by modifying query_servers or external process configuration settings via the HTTP API.",
+    "cvss_v3": 7.2,
+    "severity": "high",
+    "cwe": [
+      "CWE-78"
+    ],
+    "published": "2017-11-15",
+    "vendor": "Apache",
+    "product": "CouchDB",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-12636",
+      "https://couchdb.apache.org/cve/2017-12636.html",
+      "https://www.exploit-db.com/exploits/44913"
+    ]
+  },
+  "CVE-2017-9993": {
+    "description": "Arbitrary file disclosure vulnerability in FFmpeg before 2.8.12, 3.0.x before 3.0.9, 3.1.x before 3.1.9, 3.2.x before 3.2.6, and 3.3.x before 3.3.2 allows remote attackers to read arbitrary local system files via crafted playlist files (HLS or AVI containers containing embedded playlists) and improper demuxer/extension validation during media transcoding.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-200"
+    ],
+    "published": "2017-06-28",
+    "vendor": "FFmpeg",
+    "product": "FFmpeg",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-9993",
+      "https://github.com/FFmpeg/FFmpeg/commit/7584ffbe32",
+      "https://seclists.org/oss-sec/2017/q2/433"
     ]
   },
   "CVE-2009-0238": {
@@ -3615,7 +3700,7 @@
     ]
   },
   "CVE-2026-3910": {
-    "description": "Google Chromium V8 contains an improper restriction of operations within the bounds of a memory buffer vulnerability that could allow a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page. This vulnerability could affect multiple web browsers that utilize Chromium, including, but not limited to, Google Chrome, Microsoft Edge, and Opera.",
+    "description": "Google Chromium V8 contains an improper restriction of operations within the bounds of a memory buffer vulnerability that could allow a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page. This vulnerability could affect multiple web browsers that utilize Chromium, including, but not limited to, Google Chrome, Microsoft Edge, and Opera. Inappropriate implementation in V8 in Google Chrome prior to 146.0.7680.75 allowed a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -3998,7 +4083,7 @@
     ]
   },
   "CVE-2026-2441": {
-    "description": "Google Chromium CSS contains a use-after-free vulnerability that could allow a remote attacker to potentially exploit heap corruption via a crafted HTML page. This vulnerability could affect multiple web browsers that utilize Chromium, including, but not limited to, Google Chrome, Microsoft Edge, and Opera.",
+    "description": "Google Chromium CSS contains a use-after-free vulnerability that could allow a remote attacker to potentially exploit heap corruption via a crafted HTML page. This vulnerability could affect multiple web browsers that utilize Chromium, including, but not limited to, Google Chrome, Microsoft Edge, and Opera. Use after free in CSS in Google Chrome prior to 145.0.7632.75 allowed a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -4734,10 +4819,12 @@
     ]
   },
   "CVE-2025-14174": {
-    "description": "Google Chromium contains an out of bounds memory access vulnerability in ANGLE that could allow a remote attacker to perform out of bounds memory access via a crafted HTML page. This vulnerability could affect multiple web browsers that utilize Chromium, including, but not limited to, Google Chrome, Microsoft Edge, and Opera.",
+    "description": "Google Chromium contains an out of bounds memory access vulnerability in ANGLE that could allow a remote attacker to perform out of bounds memory access via a crafted HTML page. This vulnerability could affect multiple web browsers that utilize Chromium, including, but not limited to, Google Chrome, Microsoft Edge, and Opera. Out of bounds memory access in ANGLE in Google Chrome on Mac prior to 143.0.7499.110 allowed a remote attacker to perform out of bounds memory access via a crafted HTML page.",
     "cvss_v3": 8.5,
     "severity": "high",
-    "cwe": [],
+    "cwe": [
+      "CWE-787"
+    ],
     "published": "2025-12-12",
     "vendor": "Google",
     "product": "Chromium",
@@ -5062,7 +5149,7 @@
     ]
   },
   "CVE-2025-41244": {
-    "description": "Broadcom VMware Aria Operations and VMware Tools contain a privilege defined with unsafe actions vulnerability. A malicious local actor with non-administrative privileges having access to a VM with VMware Tools installed and managed by Aria Operations with SDMP enabled may exploit this vulnerability to escalate privileges to root on the same VM.",
+    "description": "Broadcom VMware Aria Operations and VMware Tools contain a privilege defined with unsafe actions vulnerability. A malicious local actor with non-administrative privileges having access to a VM with VMware Tools installed and managed by Aria Operations with SDMP enabled may exploit this vulnerability to escalate privileges to root on the same VM. A malicious local actor with non-administrative privileges having access to a VM with VMware Tools installed and managed by Aria Operations with SDMP enabled may exploit this vulnerability to escalate privileges to root on the same VM.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -6285,7 +6372,7 @@
     ]
   },
   "CVE-2019-5418": {
-    "description": "Rails Ruby on Rails contains a path traversal vulnerability in Action View. Specially crafted accept headers in combination with calls to `render file:` can cause arbitrary files on the target server to be rendered, disclosing the file contents.",
+    "description": "Rails Ruby on Rails contains a path traversal vulnerability in Action View. Specially crafted accept headers in combination with calls to `render file:` can cause arbitrary files on the target server to be rendered, disclosing the file contents. There is a File Content Disclosure vulnerability in Action View <5.2.2.1, <5.1.6.2, <5.0.7.2, <4.2.11.1 and v3 where specially crafted accept headers can cause contents of arbitrary files on the target system's filesystem to be exposed.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -6301,7 +6388,7 @@
     ]
   },
   "CVE-2016-10033": {
-    "description": "PHPMailer contains a command injection vulnerability because it fails to sanitize user-supplied input. Specifically, this issue affects the 'mail()' function of 'class.phpmailer.php' script. An attacker can exploit this issue to execute arbitrary code within the context of the application. Failed exploit attempts will result in a denial-of-service condition.",
+    "description": "PHPMailer contains a command injection vulnerability because it fails to sanitize user-supplied input. Specifically, this issue affects the 'mail()' function of 'class.phpmailer.php' script. An attacker can exploit this issue to execute arbitrary code within the context of the application. Failed exploit attempts will result in a denial-of-service condition. The mailSend function in the isMail transport in PHPMailer before 5.2.18 might allow remote attackers to pass extra parameters to the mail command and consequently execute arbitrary code via a \\\" (backslash double quote) in a crafted Sender property.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -6903,7 +6990,7 @@
     ]
   },
   "CVE-2025-32706": {
-    "description": "Microsoft Windows Common Log File System (CLFS) Driver contains a heap-based buffer overflow vulnerability that allows an authorized attacker to elevate privileges locally.",
+    "description": "Microsoft Windows Common Log File System (CLFS) Driver contains a heap-based buffer overflow vulnerability that allows an authorized attacker to elevate privileges locally. Improper input validation in Windows Common Log File System Driver allows an authorized attacker to elevate privileges locally.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -7347,10 +7434,12 @@
     ]
   },
   "CVE-2025-2783": {
-    "description": "Google Chromium Mojo on Windows contains a sandbox escape vulnerability caused by a logic error, which results from an incorrect handle being provided in unspecified circumstances. This vulnerability could affect multiple web browsers that utilize Chromium, including, but not limited to, Google Chrome, Microsoft Edge, and Opera.",
+    "description": "Google Chromium Mojo on Windows contains a sandbox escape vulnerability caused by a logic error, which results from an incorrect handle being provided in unspecified circumstances. This vulnerability could affect multiple web browsers that utilize Chromium, including, but not limited to, Google Chrome, Microsoft Edge, and Opera. Incorrect handle provided in unspecified circumstances in Mojo in Google Chrome on Windows prior to 134.0.6998.177 allowed a remote attacker to perform a sandbox escape via a malicious file.",
     "cvss_v3": 8.5,
     "severity": "high",
-    "cwe": [],
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
     "published": "2025-03-27",
     "vendor": "Google",
     "product": "Chromium Mojo",
@@ -7890,7 +7979,7 @@
     ]
   },
   "CVE-2017-3066": {
-    "description": "Adobe ColdFusion contains a deserialization vulnerability in the Apache BlazeDS library that allows for arbitrary code execution.",
+    "description": "Adobe ColdFusion contains a deserialization vulnerability in the Apache BlazeDS library that allows for arbitrary code execution. Adobe ColdFusion 2016 Update 3 and earlier, ColdFusion 11 update 11 and earlier, ColdFusion 10 Update 22 and earlier have a Java deserialization vulnerability in the Apache BlazeDS library. have a Java deserialization vulnerability in the Apache BlazeDS library. Successful exploitation could lead to arbitrary code execution.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -8805,10 +8894,12 @@
     ]
   },
   "CVE-2024-44308": {
-    "description": "Apple iOS, macOS, and other Apple products contain an unspecified vulnerability when processing maliciously crafted web content that may lead to arbitrary code execution.",
+    "description": "Apple iOS, macOS, and other Apple products contain an unspecified vulnerability when processing maliciously crafted web content that may lead to arbitrary code execution. Apple is aware of a report that this issue may have been actively exploited on Intel-based Mac systems.",
     "cvss_v3": 9.8,
     "severity": "critical",
-    "cwe": [],
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
     "published": "2024-11-21",
     "vendor": "Apple",
     "product": "Multiple Products",
@@ -8980,7 +9071,7 @@
     ]
   },
   "CVE-2024-43451": {
-    "description": "Microsoft Windows contains an NTLMv2 hash spoofing vulnerability that could result in disclosing a user's NTLMv2 hash to an attacker via a file open operation. The attacker could then leverage this hash to impersonate that user.",
+    "description": "Microsoft Windows contains an NTLMv2 hash spoofing vulnerability that could result in disclosing a user's NTLMv2 hash to an attacker via a file open operation. The attacker could then leverage this hash to impersonate that user. NTLM Hash Disclosure Spoofing Vulnerability",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -8996,7 +9087,7 @@
     ]
   },
   "CVE-2024-49039": {
-    "description": "Microsoft Windows Task Scheduler contains a privilege escalation vulnerability that can allow an attacker-provided, local application to escalate privileges outside of its AppContainer, and access privileged RPC functions.",
+    "description": "Microsoft Windows Task Scheduler contains a privilege escalation vulnerability that can allow an attacker-provided, local application to escalate privileges outside of its AppContainer, and access privileged RPC functions. Windows Task Scheduler Elevation of Privilege Vulnerability",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -9644,7 +9735,7 @@
     ]
   },
   "CVE-2024-38014": {
-    "description": "Microsoft Windows Installer contains an improper privilege management vulnerability that could allow an attacker to gain SYSTEM privileges.",
+    "description": "Microsoft Windows Installer contains an improper privilege management vulnerability that could allow an attacker to gain SYSTEM privileges. Windows Installer Elevation of Privilege Vulnerability",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -9708,7 +9799,7 @@
     ]
   },
   "CVE-2016-3714": {
-    "description": "ImageMagick contains an improper input validation vulnerability that affects the EPHEMERAL, HTTPS, MVG, MSL, TEXT, SHOW, WIN, and PLT coders. This allows a remote attacker to execute arbitrary code via shell metacharacters in a crafted image.",
+    "description": "ImageMagick contains an improper input validation vulnerability that affects the EPHEMERAL, HTTPS, MVG, MSL, TEXT, SHOW, WIN, and PLT coders. This allows a remote attacker to execute arbitrary code via shell metacharacters in a crafted image. The (1) EPHEMERAL, (2) HTTPS, (3) MVG, (4) MSL, (5) TEXT, (6) SHOW, (7) WIN, and (8) PLT coders in ImageMagick before 6.9.3-10 and 7.x before 7.0.1-1 allow remote attackers to execute arbitrary code via shell metacharacters in a crafted image, aka \"ImageTragick.\"",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -9926,7 +10017,7 @@
     ]
   },
   "CVE-2024-38107": {
-    "description": "Microsoft Windows Power Dependency Coordinator contains an unspecified vulnerability that allows for privilege escalation, enabling a local attacker to obtain SYSTEM privileges.",
+    "description": "Microsoft Windows Power Dependency Coordinator contains an unspecified vulnerability that allows for privilege escalation, enabling a local attacker to obtain SYSTEM privileges. Windows Power Dependency Coordinator Elevation of Privilege Vulnerability",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -10352,7 +10443,7 @@
     ]
   },
   "CVE-2024-26169": {
-    "description": "Microsoft Windows Error Reporting Service contains an improper privilege management vulnerability that allows a local attacker with user permissions to gain SYSTEM privileges.",
+    "description": "Microsoft Windows Error Reporting Service contains an improper privilege management vulnerability that allows a local attacker with user permissions to gain SYSTEM privileges. Windows Error Reporting Service Elevation of Privilege Vulnerability",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -10415,7 +10506,7 @@
     ]
   },
   "CVE-2017-3506": {
-    "description": "Oracle WebLogic Server, a product within the Fusion Middleware suite, contains an OS command injection vulnerability that allows an attacker to execute arbitrary code via a specially crafted HTTP request that includes a malicious XML document.",
+    "description": "Oracle WebLogic Server, a product within the Fusion Middleware suite, contains an OS command injection vulnerability that allows an attacker to execute arbitrary code via a specially crafted HTTP request that includes a malicious XML document. Successful attacks of this vulnerability can result in unauthorized creation, deletion or modification access to critical data or all Oracle WebLogic Server accessible data as well as unauthorized access to critical data or complete access to all Oracle WebLogic Server accessible data.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -11034,7 +11125,7 @@
     ]
   },
   "CVE-2024-21351": {
-    "description": "Microsoft Windows SmartScreen contains a security feature bypass vulnerability that allows an attacker to bypass the SmartScreen user experience and inject code to potentially gain code execution, which could lead to some data exposure, lack of system availability, or both.",
+    "description": "Microsoft Windows SmartScreen contains a security feature bypass vulnerability that allows an attacker to bypass the SmartScreen user experience and inject code to potentially gain code execution, which could lead to some data exposure, lack of system availability, or both. Windows SmartScreen Security Feature Bypass Vulnerability",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -12018,7 +12109,7 @@
     ]
   },
   "CVE-2023-36563": {
-    "description": "Microsoft WordPad contains an unspecified vulnerability that allows for information disclosure.",
+    "description": "Microsoft WordPad contains an unspecified vulnerability that allows for information disclosure. Microsoft WordPad Information Disclosure Vulnerability",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -12034,7 +12125,7 @@
     ]
   },
   "CVE-2023-44487": {
-    "description": "HTTP/2 contains a rapid reset vulnerability that allows for a distributed denial-of-service attack (DDoS).",
+    "description": "HTTP/2 contains a rapid reset vulnerability that allows for a distributed denial-of-service attack (DDoS). The HTTP/2 protocol allows a denial of service (server resource consumption) because request cancellation can reset many streams quickly, as exploited in the wild in August through October 2023.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -12142,7 +12233,7 @@
     ]
   },
   "CVE-2023-5217": {
-    "description": "Google Chromium libvpx contains a heap buffer overflow vulnerability in vp8 encoding that allows a remote attacker to potentially exploit heap corruption via a crafted HTML page. This vulnerability could impact web browsers using libvpx, including but not limited to Google Chrome.",
+    "description": "Google Chromium libvpx contains a heap buffer overflow vulnerability in vp8 encoding that allows a remote attacker to potentially exploit heap corruption via a crafted HTML page. This vulnerability could impact web browsers using libvpx, including but not limited to Google Chrome. Heap buffer overflow in vp8 encoding in libvpx in Google Chrome prior to 117.0.5938.132 and libvpx 1.13.1 allowed a remote attacker to potentially exploit heap corruption via a crafted HTML page.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -12360,7 +12451,7 @@
     ]
   },
   "CVE-2023-4863": {
-    "description": "Google Chromium WebP contains a heap-based buffer overflow vulnerability that allows a remote attacker to perform an out-of-bounds memory write via a crafted HTML page. This vulnerability can affect applications that use the WebP Codec.",
+    "description": "Google Chromium WebP contains a heap-based buffer overflow vulnerability that allows a remote attacker to perform an out-of-bounds memory write via a crafted HTML page. This vulnerability can affect applications that use the WebP Codec. Heap buffer overflow in libwebp in Google Chrome prior to 116.0.5845.187 and libwebp 1.3.2 allowed a remote attacker to perform an out of bounds memory write via a crafted HTML page.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -12550,10 +12641,12 @@
     ]
   },
   "CVE-2023-38180": {
-    "description": "Microsoft .NET Core and Visual Studio contain an unspecified vulnerability that allows for denial-of-service (DoS).",
+    "description": "Microsoft .NET Core and Visual Studio contain an unspecified vulnerability that allows for denial-of-service (DoS). .NET and Visual Studio Denial of Service Vulnerability",
     "cvss_v3": 8.5,
     "severity": "high",
-    "cwe": [],
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
     "published": "2023-08-09",
     "vendor": "Microsoft",
     "product": ".NET Core and Visual Studio",
@@ -13416,10 +13509,12 @@
     ]
   },
   "CVE-2016-3427": {
-    "description": "Oracle Java SE and JRockit contains an unspecified vulnerability that allows remote attackers to affect confidentiality, integrity, and availability via vectors related to Java Management Extensions (JMX). This vulnerability can be exploited through sandboxed Java Web Start applications and sandboxed Java applets. It can also be exploited by supplying data to APIs in the specified component without using sandboxed Java Web Start applications or sandboxed Java applets, such as through a web service.",
+    "description": "Oracle Java SE and JRockit contains an unspecified vulnerability that allows remote attackers to affect confidentiality, integrity, and availability via vectors related to Java Management Extensions (JMX). This vulnerability can be exploited through sandboxed Java Web Start applications and sandboxed Java applets. It can also be exploited by supplying data to APIs in the specified component without using sandboxed Java Web Start applications or sandboxed Java applets, such as through a web service. Unspecified vulnerability in Oracle Java SE 6u113, 7u99, and 8u77; Java SE Embedded 8u77; and JRockit R28.3.9 allows remote attackers to affect confidentiality, integrity, and availability via vectors related to JMX.",
     "cvss_v3": 8.5,
     "severity": "high",
-    "cwe": [],
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
     "published": "2023-05-12",
     "vendor": "Oracle",
     "product": "Java SE and JRockit",
@@ -13430,7 +13525,7 @@
     ]
   },
   "CVE-2016-8735": {
-    "description": "Apache Tomcat contains an unspecified vulnerability that allows for remote code execution if JmxRemoteLifecycleListener is used and an attacker can reach Java Management Extension (JMX) ports. This CVE exists because this listener wasn't updated for consistency with the Oracle patched issues for CVE-2016-3427 which affected credential types.",
+    "description": "Apache Tomcat contains an unspecified vulnerability that allows for remote code execution if JmxRemoteLifecycleListener is used and an attacker can reach Java Management Extension (JMX) ports. This CVE exists because this listener wasn't updated for consistency with the Oracle patched issues for CVE-2016-3427 which affected credential types. Remote code execution is possible with Apache Tomcat before 6.0.48, 7.x before 7.0.73, 8.x before 8.0.39, 8.5.x before 8.5.7, and 9.x before 9.0.0.M12 if JmxRemoteLifecycleListener is used and an attacker can reach JMX ports.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -13797,7 +13892,7 @@
     ]
   },
   "CVE-2017-7494": {
-    "description": "Samba contains a remote code execution vulnerability, allowing a malicious client to upload a shared library to a writable share and then cause the server to load and execute it.",
+    "description": "Samba contains a remote code execution vulnerability, allowing a malicious client to upload a shared library to a writable share and then cause the server to load and execute it. Samba since version 3.5.0 and before 4.6.4, 4.5.10 and 4.4.14 is vulnerable to remote code execution vulnerability, allowing a malicious client to upload a shared library to a writable share, and then cause the server to load and execute it.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -13992,7 +14087,7 @@
     ]
   },
   "CVE-2021-39144": {
-    "description": "XStream contains a remote code execution vulnerability that allows an attacker to manipulate the processed input stream and replace or inject objects that result in the execution of a local command on the server. This vulnerability can affect multiple products, including but not limited to VMware Cloud Foundation.",
+    "description": "XStream contains a remote code execution vulnerability that allows an attacker to manipulate the processed input stream and replace or inject objects that result in the execution of a local command on the server. This vulnerability can affect multiple products, including but not limited to VMware Cloud Foundation. XStream 1.4.18 uses no longer a blacklist by default, since it cannot be secured for general purpose.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -14567,7 +14662,7 @@
     ]
   },
   "CVE-2022-41091": {
-    "description": "Microsoft Windows Mark of the Web (MOTW) contains a security feature bypass vulnerability resulting in a limited loss of integrity and availability of security features.",
+    "description": "Microsoft Windows Mark of the Web (MOTW) contains a security feature bypass vulnerability resulting in a limited loss of integrity and availability of security features. Windows Mark of the Web Security Feature Bypass Vulnerability",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -16013,7 +16108,7 @@
     ]
   },
   "CVE-2017-5070": {
-    "description": "Google Chromium V8 Engine contains a type confusion vulnerability that allows a remote attacker to execute code inside a sandbox via a crafted HTML page. This vulnerability could affect multiple web browsers that utilize Chromium, including, but not limited to, Google Chrome, Microsoft Edge, and Opera.",
+    "description": "Google Chromium V8 Engine contains a type confusion vulnerability that allows a remote attacker to execute code inside a sandbox via a crafted HTML page. This vulnerability could affect multiple web browsers that utilize Chromium, including, but not limited to, Google Chrome, Microsoft Edge, and Opera. Type confusion in V8 in Google Chrome prior to 59.0.3071.86 for Linux, Windows, and Mac, and 59.0.3071.92 for Android, allowed a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -16441,7 +16536,7 @@
     ]
   },
   "CVE-2016-0984": {
-    "description": "Use-after-free vulnerability in Adobe Flash Player and Adobe AIR allows attackers to execute code.",
+    "description": "Use-after-free vulnerability in Adobe Flash Player and Adobe AIR allows attackers to execute code. Use-after-free vulnerability in Adobe Flash Player before 18.0.0.329 and 19.x and 20.x before 20.0.0.306 on Windows and OS X and before 11.2.202.569 on Linux, Adobe AIR before 20.0.0.260, Adobe AIR SDK before 20.0.0.260, and Adobe AIR SDK & Compiler before 20.0.0.260 allows attackers to execute arbitrary code via unspecified vectors, a different vulnerability than CVE-2016-0973, CVE-2016-0974, CVE-2016-0975, CVE-2016-0982, and CVE-2016-0983.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -16943,7 +17038,7 @@
     ]
   },
   "CVE-2017-0147": {
-    "description": "The SMBv1 server in Microsoft Windows allows remote attackers to obtain sensitive information from process memory via a crafted packet.",
+    "description": "The SMBv1 server in Microsoft Windows allows remote attackers to obtain sensitive information from process memory via a crafted packet. The SMBv1 server in Microsoft Windows Vista SP2; Windows Server 2008 SP2 and R2 SP1; Windows 7 SP1; Windows 8.1; Windows Server 2012 Gold and R2; Windows RT 8.1; and Windows 10 Gold, 1511, and 1607; and Windows Server 2016 allows remote attackers to obtain sensitive information from process memory via a crafted packets, aka \"Windows SMB Information Disclosure Vulnerability.\" The SMBv1 server in Microsoft Windows Vista SP2; Windows Server 2008 SP2 and R2 SP1; Windows 7 SP1; Windows 8.1; Windows Server 2012 Gold and R2; Windows RT 8.1; and Windows 10 Gold, 1511, and 1607; and Windows Server 2016 allows remote attackers to obtain sensitive information from process memory via a crafted packets, aka \\\"Windows SMB Information Disclosure Vulnerability.\\",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -17003,10 +17098,12 @@
     ]
   },
   "CVE-2017-0210": {
-    "description": "A privilege escalation vulnerability exists when Internet Explorer does not properly enforce cross-domain policies, which could allow an attacker to access information.",
+    "description": "A privilege escalation vulnerability exists when Internet Explorer does not properly enforce cross-domain policies, which could allow an attacker to access information. An elevation of privilege vulnerability exists when Internet Explorer does not properly enforce cross-domain policies, which could allow an attacker to access information from one domain and inject it into another domain, aka \"Internet Explorer Elevation of Privilege Vulnerability.\" An elevation of privilege vulnerability exists when Internet Explorer does not properly enforce cross-domain policies, which could allow an attacker to access information from one domain and inject it into another domain, aka \\\"Internet Explorer Elevation of Privilege Vulnerability.\\",
     "cvss_v3": 9.8,
     "severity": "critical",
-    "cwe": [],
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
     "published": "2022-05-24",
     "vendor": "Microsoft",
     "product": "Internet Explorer",
@@ -17076,7 +17173,7 @@
     ]
   },
   "CVE-2016-3351": {
-    "description": "An information disclosure vulnerability exists in the way that certain functions in Internet Explorer and Edge handle objects in memory. The vulnerability could allow an attacker to detect specific files on the user's computer.",
+    "description": "An information disclosure vulnerability exists in the way that certain functions in Internet Explorer and Edge handle objects in memory. The vulnerability could allow an attacker to detect specific files on the user's computer. Microsoft Internet Explorer 9 through 11 and Microsoft Edge allow remote attackers to obtain sensitive information via a crafted web site, aka \"Microsoft Browser Information Disclosure Vulnerability.\" Microsoft Internet Explorer 9 through 11 and Microsoft Edge allow remote attackers to obtain sensitive information via a crafted web site, aka \\\"Microsoft Browser Information Disclosure Vulnerability.\\",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -17166,7 +17263,7 @@
     ]
   },
   "CVE-2016-3298": {
-    "description": "An information disclosure vulnerability exists when the Microsoft Internet Messaging API improperly handles objects in memory. An attacker who successfully exploited this vulnerability could allow the attacker to test for the presence of files on disk.",
+    "description": "An information disclosure vulnerability exists when the Microsoft Internet Messaging API improperly handles objects in memory. An attacker who successfully exploited this vulnerability could allow the attacker to test for the presence of files on disk. Microsoft Internet Explorer 9 through 11 and the Internet Messaging API in Windows Vista SP2, Windows Server 2008 SP2 and R2 SP1, and Windows 7 SP1 allow remote attackers to determine the existence of arbitrary files via a crafted web site, aka \"Internet Explorer Information Disclosure Vulnerability.\" Microsoft Internet Explorer 9 through 11 and the Internet Messaging API in Windows Vista SP2, Windows Server 2008 SP2 and R2 SP1, and Windows 7 SP1 allow remote attackers to determine the existence of arbitrary files via a crafted web site, aka \\\"Internet Explorer Information Disclosure Vulnerability.\\",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -17459,7 +17556,7 @@
     ]
   },
   "CVE-2018-5002": {
-    "description": "Adobe Flash Player have a stack-based buffer overflow vulnerability that could lead to remote code execution.",
+    "description": "Adobe Flash Player have a stack-based buffer overflow vulnerability that could lead to remote code execution. Successful exploitation could lead to arbitrary code execution in the context of the current user.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -17884,7 +17981,7 @@
     ]
   },
   "CVE-2022-24521": {
-    "description": "Microsoft Windows Common Log File System (CLFS) Driver contains an unspecified vulnerability that allows for privilege escalation.",
+    "description": "Microsoft Windows Common Log File System (CLFS) Driver contains an unspecified vulnerability that allows for privilege escalation. Windows Common Log File System Driver Elevation of Privilege Vulnerability",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -17900,10 +17997,12 @@
     ]
   },
   "CVE-2018-7602": {
-    "description": "A remote code execution vulnerability exists within multiple subsystems of Drupal that can allow attackers to exploit multiple attack vectors on a Drupal site.",
+    "description": "A remote code execution vulnerability exists within multiple subsystems of Drupal that can allow attackers to exploit multiple attack vectors on a Drupal site. This potentially allows attackers to exploit multiple attack vectors on a Drupal site, which could result in the site being compromised.",
     "cvss_v3": 9.8,
     "severity": "critical",
-    "cwe": [],
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
     "published": "2022-04-13",
     "vendor": "Drupal",
     "product": "Core",
@@ -19367,7 +19466,7 @@
     ]
   },
   "CVE-2017-12615": {
-    "description": "When running Apache Tomcat on Windows with HTTP PUTs enabled, it is possible to upload a JSP file to the server via a specially crafted request. This JSP could then be requested and any code it contained would be executed by the server.",
+    "description": "When running Apache Tomcat on Windows with HTTP PUTs enabled, it is possible to upload a JSP file to the server via a specially crafted request. This JSP could then be requested and any code it contained would be executed by the server. via setting the readonly initialisation parameter of the Default to false) it was possible to upload a JSP file to the server via a specially crafted request.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -19397,7 +19496,7 @@
     ]
   },
   "CVE-2016-7892": {
-    "description": "Adobe Flash Player has an exploitable use-after-free vulnerability in the TextField class.",
+    "description": "Adobe Flash Player has an exploitable use-after-free vulnerability in the TextField class. Adobe Flash Player versions 23.0.0.207 and earlier, 11.2.202.644 and earlier have an exploitable use after free vulnerability in the TextField class.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -19412,10 +19511,12 @@
     ]
   },
   "CVE-2016-4171": {
-    "description": "Unspecified vulnerability in Adobe Flash Player allows for remote code execution.",
+    "description": "Unspecified vulnerability in Adobe Flash Player allows for remote code execution. Unspecified vulnerability in Adobe Flash Player 21.0.0.242 and earlier allows remote attackers to execute arbitrary code via unknown vectors, as exploited in the wild in June 2016.",
     "cvss_v3": 9.8,
     "severity": "critical",
-    "cwe": [],
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
     "published": "2022-03-25",
     "vendor": "Adobe",
     "product": "Flash Player",
@@ -19828,10 +19929,12 @@
     ]
   },
   "CVE-2019-1405": {
-    "description": "A privilege escalation vulnerability exists when the Windows UPnP service improperly allows COM object creation.",
+    "description": "A privilege escalation vulnerability exists when the Windows UPnP service improperly allows COM object creation. An elevation of privilege vulnerability exists when the Windows Universal Plug and Play (UPnP) service improperly allows COM object creation, aka 'Windows UPnP Service Elevation of Privilege Vulnerability'.",
     "cvss_v3": 9.8,
     "severity": "critical",
-    "cwe": [],
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
     "published": "2022-03-15",
     "vendor": "Microsoft",
     "product": "Windows",
@@ -19869,7 +19972,7 @@
     ]
   },
   "CVE-2019-1253": {
-    "description": "A privilege escalation vulnerability exists when the Windows AppX Deployment Server improperly handles junctions.",
+    "description": "A privilege escalation vulnerability exists when the Windows AppX Deployment Server improperly handles junctions. An elevation of privilege vulnerability exists when the Windows AppX Deployment Server improperly handles junctions.To exploit this vulnerability, an attacker would first have to gain execution on the victim system, aka 'Windows Elevation of Privilege Vulnerability'.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -21024,10 +21127,12 @@
     ]
   },
   "CVE-2016-1019": {
-    "description": "Adobe Flash Player allows remote attackers to cause a denial of service or possibly execute arbitrary code.",
+    "description": "Adobe Flash Player allows remote attackers to cause a denial of service or possibly execute arbitrary code. Adobe Flash Player 21.0.0.197 and earlier allows remote attackers to cause a denial of service (application crash) or possibly execute arbitrary code via unspecified vectors, as exploited in the wild in April 2016.",
     "cvss_v3": 9.8,
     "severity": "critical",
-    "cwe": [],
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
     "published": "2022-03-03",
     "vendor": "Adobe",
     "product": "Flash Player",
@@ -21873,7 +21978,7 @@
     ]
   },
   "CVE-2017-9791": {
-    "description": "The Struts 1 plugin in Apache Struts might allow remote code execution via a malicious field value passed in a raw message to the ActionMessage.",
+    "description": "The Struts 1 plugin in Apache Struts might allow remote code execution via a malicious field value passed in a raw message to the ActionMessage. The Struts 1 plugin in Apache Struts 2.1.x and 2.3.x might allow remote code execution via a malicious field value passed in a raw message to the ActionMessage.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -21942,7 +22047,7 @@
     ]
   },
   "CVE-2017-0145": {
-    "description": "The SMBv1 server in multiple Microsoft Windows versions allows remote attackers to execute arbitrary code via crafted packets.",
+    "description": "The SMBv1 server in multiple Microsoft Windows versions allows remote attackers to execute arbitrary code via crafted packets. The SMBv1 server in Microsoft Windows Vista SP2; Windows Server 2008 SP2 and R2 SP1; Windows 7 SP1; Windows 8.1; Windows Server 2012 Gold and R2; Windows RT 8.1; and Windows 10 Gold, 1511, and 1607; and Windows Server 2016 allows remote attackers to execute arbitrary code via crafted packets, aka \"Windows SMB Remote Code Execution Vulnerability.\" This vulnerability is different from those described in CVE-2017-0143, CVE-2017-0144, CVE-2017-0146, and CVE-2017-0148. The SMBv1 server in Microsoft Windows Vista SP2; Windows Server 2008 SP2 and R2 SP1; Windows 7 SP1; Windows 8.1; Windows Server 2012 Gold and R2; Windows RT 8.1; and Windows 10 Gold, 1511, and 1607; and Windows Server 2016 allows remote attackers to execute arbitrary code via crafted packets, aka \\\"Windows SMB Remote Code Execution Vulnerability.\\\" This vulnerability is different from those described in CVE-2017-0143, CVE-2017-0144, CVE-2017-0146, and CVE-2017-0148.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -21957,7 +22062,7 @@
     ]
   },
   "CVE-2016-3088": {
-    "description": "The Fileserver web application in Apache ActiveMQ allows remote attackers to upload and execute arbitrary files via an HTTP PUT followed by an HTTP MOVE request",
+    "description": "The Fileserver web application in Apache ActiveMQ allows remote attackers to upload and execute arbitrary files via an HTTP PUT followed by an HTTP MOVE request The Fileserver web application in Apache ActiveMQ 5.x before 5.14.0 allows remote attackers to upload and execute arbitrary files via an HTTP PUT followed by an HTTP MOVE request.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -23231,7 +23336,7 @@
     ]
   },
   "CVE-2019-0211": {
-    "description": "Apache HTTP Server, with MPM event, worker or prefork, code executing in less-privileged child processes or threads (including scripts executed by an in-process scripting interpreter) could execute code with the privileges of the parent process (usually root) by manipulating the scoreboard.",
+    "description": "Apache HTTP Server, with MPM event, worker or prefork, code executing in less-privileged child processes or threads (including scripts executed by an in-process scripting interpreter) could execute code with the privileges of the parent process (usually root) by manipulating the scoreboard. In Apache HTTP Server 2.4 releases 2.4.17 to 2.4.38, with MPM event, worker or prefork, code executing in less-privileged child processes or threads (including scripts executed by an in-process scripting interpreter) could execute arbitrary code with the privileges of the parent process (usually root) by manipulating the scoreboard.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -23246,7 +23351,7 @@
     ]
   },
   "CVE-2016-4437": {
-    "description": "Apache Shiro contains a vulnerability which may allow remote attackers to execute code or bypass intended access restrictions via an unspecified request parameter when a cipher key has not been configured for the \"remember me\" feature.",
+    "description": "Apache Shiro contains a vulnerability which may allow remote attackers to execute code or bypass intended access restrictions via an unspecified request parameter when a cipher key has not been configured for the \"remember me\" feature. Apache Shiro before 1.2.5, when a cipher key has not been configured for the \"remember me\" feature, allows remote attackers to execute arbitrary code or bypass intended access restrictions via an unspecified request parameter.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -23486,7 +23591,7 @@
     ]
   },
   "CVE-2021-1871": {
-    "description": "Apple iOS, iPadOS, and macOS WebKit contain an unspecified logic vulnerability that allows a remote attacker to execute code. This vulnerability could impact HTML parsers that use WebKit, including but not limited to Apple Safari and non-Apple products which rely on WebKit for HTML processing.",
+    "description": "Apple iOS, iPadOS, and macOS WebKit contain an unspecified logic vulnerability that allows a remote attacker to execute code. This vulnerability could impact HTML parsers that use WebKit, including but not limited to Apple Safari and non-Apple products which rely on WebKit for HTML processing. This issue is fixed in macOS Big Sur 11.2, Security Update 2021-001 Catalina, Security Update 2021-001 Mojave, iOS 14.4 and iPadOS 14.4.",
     "cvss_v3": 8.5,
     "severity": "high",
     "cwe": [
@@ -24942,10 +25047,12 @@
     ]
   },
   "CVE-2020-0683": {
-    "description": "Microsoft Windows Installer contains a privilege escalation vulnerability when MSI packages process symbolic links, which allows attackers to bypass access restrictions to add or remove files.",
+    "description": "Microsoft Windows Installer contains a privilege escalation vulnerability when MSI packages process symbolic links, which allows attackers to bypass access restrictions to add or remove files. An elevation of privilege vulnerability exists in the Windows Installer when MSI packages process symbolic links, aka 'Windows Installer Elevation of Privilege Vulnerability'.",
     "cvss_v3": 9.8,
     "severity": "critical",
-    "cwe": [],
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
     "published": "2021-11-03",
     "vendor": "Microsoft",
     "product": "Windows",
@@ -25448,10 +25555,12 @@
     ]
   },
   "CVE-2019-1215": {
-    "description": "Microsoft Windows contains an unspecified vulnerability due to the way ws2ifsl.sys (Winsock) handles objects in memory, allowing for privilege escalation. Successful exploitation allows an attacker to execute code with elevated privileges.",
+    "description": "Microsoft Windows contains an unspecified vulnerability due to the way ws2ifsl.sys (Winsock) handles objects in memory, allowing for privilege escalation. Successful exploitation allows an attacker to execute code with elevated privileges. An elevation of privilege vulnerability exists in the way that ws2ifsl.sys (Winsock) handles objects in memory, aka 'Windows Elevation of Privilege Vulnerability'.",
     "cvss_v3": 9.8,
     "severity": "critical",
-    "cwe": [],
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
     "published": "2021-11-03",
     "vendor": "Microsoft",
     "product": "Windows",
@@ -25521,10 +25630,12 @@
     ]
   },
   "CVE-2021-27085": {
-    "description": "Microsoft Internet Explorer contains an unspecified vulnerability that allows for remote code execution.",
+    "description": "Microsoft Internet Explorer contains an unspecified vulnerability that allows for remote code execution. Internet Explorer Remote Code Execution Vulnerability",
     "cvss_v3": 9.8,
     "severity": "critical",
-    "cwe": [],
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
     "published": "2021-11-03",
     "vendor": "Microsoft",
     "product": "Internet Explorer",
@@ -27037,7 +27148,7 @@
     ]
   },
   "CVE-2020-4006": {
-    "description": "VMware Workspace One Access, Access Connector, Identity Manager, and Identity Manager Connector contain a command injection vulnerability. An attacker with network access to the administrative configurator on port 8443 and a valid password for the configurator administrator account can execute commands with unrestricted privileges on the underlying operating system.",
+    "description": "VMware Workspace One Access, Access Connector, Identity Manager, and Identity Manager Connector contain a command injection vulnerability. An attacker with network access to the administrative configurator on port 8443 and a valid password for the configurator administrator account can execute commands with unrestricted privileges on the underlying operating system. VMware Workspace One Access, Access Connector, Identity Manager, and Identity Manager Connector address have a command injection vulnerability.",
     "cvss_v3": 9.8,
     "severity": "critical",
     "cwe": [
@@ -27169,6 +27280,651 @@
     "exploit_available": true,
     "references": [
       "https://nvd.nist.gov/vuln/detail/CVE-2020-29583"
+    ]
+  },
+  "CVE-2015-5254": {
+    "description": "Apache ActiveMQ 5.x before 5.13.0 does not restrict the classes that can be serialized in the broker, which allows remote attackers to execute arbitrary code via a crafted serialized Java Message Service (JMS) ObjectMessage object.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-20"
+    ],
+    "published": "2015-01-01",
+    "vendor": "Apache",
+    "product": "Activemq",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2015-5254"
+    ]
+  },
+  "CVE-2016-1897": {
+    "description": "FFmpeg 2.x allows remote attackers to conduct cross-origin attacks and read arbitrary files by using the concat protocol in an HTTP Live Streaming (HLS) M3U8 file, leading to an external HTTP request in which the URL string contains the first line of a local file.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-200"
+    ],
+    "published": "2016-01-01",
+    "vendor": "Ffmpeg",
+    "product": "Ffmpeg",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2016-1897"
+    ]
+  },
+  "CVE-2016-4977": {
+    "description": "When processing authorization requests using the whitelabel views in Spring Security OAuth 2.0.0 to 2.0.9 and 1.0.0 to 1.0.5, the response_type parameter value was executed as Spring SpEL which enabled a malicious user to trigger remote code execution via the crafting of the value for response_type.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-19"
+    ],
+    "published": "2016-01-01",
+    "vendor": "Pivotal",
+    "product": "Spring Security Oauth",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2016-4977"
+    ]
+  },
+  "CVE-2016-10134": {
+    "description": "SQL injection vulnerability in Zabbix before 2.2.14 and 3.0 before 3.0.4 allows remote attackers to execute arbitrary SQL commands via the toggle_ids array parameter in latest.php.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-89"
+    ],
+    "published": "2016-01-01",
+    "vendor": "Zabbix",
+    "product": "Zabbix",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2016-10134"
+    ]
+  },
+  "CVE-2017-2824": {
+    "description": "A specially crafted set of packets can cause a command injection resulting in remote code execution.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-78"
+    ],
+    "published": "2017-01-01",
+    "vendor": "Zabbix",
+    "product": "Zabbix",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-2824"
+    ]
+  },
+  "CVE-2017-6920": {
+    "description": "Drupal core 8 before versions 8.3.4 allows remote attackers to execute arbitrary code due to the PECL YAML parser not handling PHP objects safely during certain operations.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-19"
+    ],
+    "published": "2017-01-01",
+    "vendor": "Drupal",
+    "product": "Drupal",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-6920"
+    ]
+  },
+  "CVE-2017-7504": {
+    "description": "HTTPServerILServlet.java in JMS over HTTP Invocation Layer of the JbossMQ implementation, which is enabled by default in Red Hat Jboss Application Server <= Jboss 4.X does not restrict the classes for which it performs deserialization, which allows remote attackers to execute arbitrary code via crafted serialized data.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-502"
+    ],
+    "published": "2017-01-01",
+    "vendor": "Redhat",
+    "product": "Jboss Enterprise Application Platform",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-7504"
+    ]
+  },
+  "CVE-2017-7525": {
+    "description": "A deserialization flaw was discovered in the jackson-databind, versions before 2.6.7.1, 2.7.9.1 and 2.8.9, which could allow an unauthenticated user to perform code execution by sending the maliciously crafted input to the readValue method of the ObjectMapper.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-502"
+    ],
+    "published": "2017-01-01",
+    "vendor": "Fasterxml",
+    "product": "Jackson-Databind",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-7525"
+    ]
+  },
+  "CVE-2017-8917": {
+    "description": "3.7.x before 3.7.1 allows attackers to execute arbitrary SQL commands via unspecified vectors. SQL injection vulnerability in Joomla! 3.7.x before 3.7.1 allows attackers to execute arbitrary SQL commands",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-89"
+    ],
+    "published": "2017-01-01",
+    "vendor": "Joomla",
+    "product": "Joomla!",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-8917"
+    ]
+  },
+  "CVE-2017-12629": {
+    "description": "Note that the XML external entity expansion vulnerability occurs in the XML Query Parser which is available, by default, for any query request with parameters deftype=xmlparser and can be exploited to upload malicious data to the /upload request handler or as Blind XXE using ftp wrapper in order to read arbitrary local files from the Solr server.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-611"
+    ],
+    "published": "2017-01-01",
+    "vendor": "Apache",
+    "product": "Solr",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-12629"
+    ]
+  },
+  "CVE-2017-12635": {
+    "description": "Due to differences in the Erlang-based JSON parser and JavaScript-based JSON parser, it is possible in Apache CouchDB before 1.7.0 and 2.x before 2.1.1 to submit _users documents with duplicate keys for 'roles' used for access control within the database, including the special case '_admin' role, that denotes administrative users. The vulnerability allows non-admin users to give themselves admin privileges.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-269"
+    ],
+    "published": "2017-01-01",
+    "vendor": "Apache",
+    "product": "Couchdb",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-12635"
+    ]
+  },
+  "CVE-2017-12794": {
+    "description": "This vulnerability shouldn't affect most production sites since you shouldn't run with \"DEBUG = True\" (which makes this page accessible) in your production settings. HTML autoescaping was disabled in a portion of the template for the technical 500 debug page.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-79"
+    ],
+    "published": "2017-01-01",
+    "vendor": "Djangoproject",
+    "product": "Django",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-12794"
+    ]
+  },
+  "CVE-2017-16082": {
+    "description": "A remote code execution vulnerability was found within the pg module when the remote database or query specifies a specially crafted column name.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-94"
+    ],
+    "published": "2017-01-01",
+    "vendor": "Node-Postgres",
+    "product": "Pg",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-16082"
+    ]
+  },
+  "CVE-2017-17405": {
+    "description": "The default value of localfile is File.basename(remotefile), so malicious FTP servers could cause arbitrary command execution. If the localfile argument starts with the \"|\" pipe character, the command following the pipe character is executed.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-78"
+    ],
+    "published": "2017-01-01",
+    "vendor": "Ruby-Lang",
+    "product": "Ruby",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-17405"
+    ]
+  },
+  "CVE-2026-9986": {
+    "description": "Insufficient validation of untrusted input in OptimizationGuide in Google Chrome prior to 148.0.7778.216 allowed a remote attacker who had compromised the renderer process to perform UI spoofing via a crafted HTML page.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-20"
+    ],
+    "published": "2026-01-01",
+    "vendor": "Google",
+    "product": "Chrome",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-9986"
+    ]
+  },
+  "CVE-2021-21351": {
+    "description": "In XStream before version 1.4.16, there is a vulnerability may allow a remote attacker to load and execute arbitrary code from a remote host only by manipulating the processed input stream.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-434"
+    ],
+    "published": "2021-01-01",
+    "vendor": "Apache",
+    "product": "Activemq",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2021-21351"
+    ]
+  },
+  "CVE-2016-5387": {
+    "description": "The Apache HTTP Server through 2.4.23 follows RFC 3875 section 4.1.18 and therefore does not protect applications from the presence of untrusted client data in the HTTP_PROXY environment variable, which might allow remote attackers to redirect an application's outbound HTTP traffic to an arbitrary proxy server via a crafted Proxy header in an HTTP request, aka an \"httpoxy\" issue. The Apache HTTP Server through 2.4.23 follows RFC 3875 section 4.1.18 and therefore does not protect applications from the presence of untrusted client data in the HTTP_PROXY environment variable, which might allow remote attackers to redirect an application's outbound HTTP traffic to an arbitrary proxy server via a crafted Proxy header in an HTTP request, aka an \\\"httpoxy\\\" issue.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
+    "published": "2016-01-01",
+    "vendor": "Apache",
+    "product": "Http Server",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2016-5387"
+    ]
+  },
+  "CVE-2026-111497": {
+    "description": "A buffer overflow vulnerability in the Brotli decoder (c/dec/decode.c) in Google Brotli versions 1.0.3 through 1.2.0 on all platforms allows a remote unauthenticated attacker to corrupt adjacent decoder state memory, disclose sensitive memory contents, cause a denial of service, or potentially execute arbitrary code using a crafted Brotli-compressed stream.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-252"
+    ],
+    "published": "2026-01-01",
+    "vendor": "7-Zip",
+    "product": "P7Zip",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-111497"
+    ]
+  },
+  "CVE-2020-1957": {
+    "description": "Apache Shiro before 1.5.2, when using Apache Shiro with Spring dynamic controllers, a specially crafted request may cause an authentication bypass.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
+    "published": "2020-01-01",
+    "vendor": "Apache",
+    "product": "Shiro",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2020-1957"
+    ]
+  },
+  "CVE-2023-5002": {
+    "description": "This issue occurs when the pgAdmin server HTTP API validates the path a user selects to external PostgreSQL utilities such as pg_dump and pg_restore.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-78"
+    ],
+    "published": "2023-01-01",
+    "vendor": "Pgadmin",
+    "product": "Pgadmin 4",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2023-5002"
+    ]
+  },
+  "CVE-2019-6116": {
+    "description": "In Artifex Ghostscript through 9.26, ephemeral or transient procedures can allow access to system operators, leading to remote code execution.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
+    "published": "2019-01-01",
+    "vendor": "Artifex",
+    "product": "Ghostscript",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2019-6116"
+    ]
+  },
+  "CVE-2017-8386": {
+    "description": "git-shell in git before 2.4.12, 2.5.x before 2.5.6, 2.6.x before 2.6.7, 2.7.x before 2.7.5, 2.8.x before 2.8.5, 2.9.x before 2.9.4, 2.10.x before 2.10.3, 2.11.x before 2.11.2, and 2.12.x before 2.12.3 might allow remote authenticated users to gain privileges via a repository name that starts with a - (dash) character.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
+    "published": "2017-01-01",
+    "vendor": "Git",
+    "product": "Git-Shell",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-8386"
+    ]
+  },
+  "CVE-2026-9992": {
+    "description": "Use after free in Network in Google Chrome prior to 148.0.7778.216 allowed a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-416"
+    ],
+    "published": "2026-01-01",
+    "vendor": "Google",
+    "product": "Chrome",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-9992"
+    ]
+  },
+  "CVE-2026-9993": {
+    "description": "Use after free in Views in Google Chrome prior to 148.0.7778.216 allowed a remote attacker who had compromised the renderer process to potentially perform a sandbox escape via a crafted PDF file.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-416"
+    ],
+    "published": "2026-01-01",
+    "vendor": "Google",
+    "product": "Chrome",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-9993"
+    ]
+  },
+  "CVE-2026-9995": {
+    "description": "Use after free in WebXR in Google Chrome prior to 148.0.7778.216 allowed a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-416"
+    ],
+    "published": "2026-01-01",
+    "vendor": "Google",
+    "product": "Chrome",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-9995"
+    ]
+  },
+  "CVE-2018-19475": {
+    "description": "psi/zdevice2.c in Artifex Ghostscript before 9.26 allows remote attackers to bypass intended access restrictions because available stack space is not checked when the device remains the same.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
+    "published": "2018-01-01",
+    "vendor": "Artifex",
+    "product": "Ghostscript",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2018-19475"
+    ]
+  },
+  "CVE-2018-16509": {
+    "description": "Incorrect \"restoration of privilege\" checking during handling of /invalidaccess exceptions could be used by attackers able to supply crafted PostScript to execute code using the \"pipe\" instruction. Incorrect \\\"restoration of privilege\\\" checking during handling of /invalidaccess exceptions could be used by attackers able to supply crafted PostScript to execute code using the \\\"pipe\\\" instruction.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "NVD-CWE-noinfo"
+    ],
+    "published": "2018-01-01",
+    "vendor": "Artifex",
+    "product": "Ghostscript",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2018-16509"
+    ]
+  },
+  "CVE-2016-1898": {
+    "description": "FFmpeg 2.x before 2.8.5, 2.7.x before 2.7.5, 2.6.x before 2.6.7, and 2.5.x before 2.5.10 allows remote attackers to conduct cross-origin attacks and read arbitrary files by using the subfile protocol in an HTTP Live Streaming (HLS) M3U8 file.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-200"
+    ],
+    "published": "2016-01-20",
+    "vendor": "FFmpeg",
+    "product": "FFmpeg",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2016-1898"
+    ]
+  },
+  "CVE-2016-5385": {
+    "description": "PHP through 7.0.8 does not protect applications from the presence of untrusted client data in the HTTP_PROXY environment variable, which might allow remote attackers to redirect an application's outbound HTTP traffic to an arbitrary proxy server via a crafted Proxy header in an HTTP request, aka an 'httpoxy' issue.",
+    "cvss_v3": 8.1,
+    "severity": "high",
+    "cwe": [
+      "CWE-20"
+    ],
+    "published": "2016-07-18",
+    "vendor": "PHP",
+    "product": "PHP",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2016-5385"
+    ]
+  },
+  "CVE-2016-5734": {
+    "description": "phpMyAdmin 4.0.x before 4.0.10.16, 4.4.x before 4.4.15.7, and 4.6.x before 4.6.3 allows remote authenticated users to execute arbitrary PHP code via preg_replace evaluation in tbl_find_replace.php.",
+    "cvss_v3": 8.8,
+    "severity": "high",
+    "cwe": [
+      "CWE-94"
+    ],
+    "published": "2016-06-23",
+    "vendor": "PhpMyAdmin",
+    "product": "PhpMyAdmin",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2016-5734"
+    ]
+  },
+  "CVE-2016-6286": {
+    "description": "Pivotal Spring Security OAuth 2.0.0 through 2.0.9, and 1.0.0 through 1.0.5, when configured with an expression-based authorization rule, allows remote attackers to obtain sensitive information or execute arbitrary expressions via crafted parameters.",
+    "cvss_v3": 8.8,
+    "severity": "high",
+    "cwe": [
+      "CWE-19"
+    ],
+    "published": "2016-07-20",
+    "vendor": "Pivotal",
+    "product": "Spring Security OAuth",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2016-6286"
+    ]
+  },
+  "CVE-2016-6287": {
+    "description": "Pivotal Spring Security OAuth 2.0.0 through 2.0.9, and 1.0.0 through 1.0.5, when processing approval view templates, allows remote attackers to evaluate SpEL expressions and execute arbitrary code via crafted approval parameters.",
+    "cvss_v3": 8.8,
+    "severity": "high",
+    "cwe": [
+      "CWE-19"
+    ],
+    "published": "2016-07-20",
+    "vendor": "Pivotal",
+    "product": "Spring Security OAuth",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2016-6287"
+    ]
+  },
+  "CVE-2017-12611": {
+    "description": "Apache Struts 2.0.0 through 2.3.33 and 2.5 through 2.5.10.1 allows remote code execution when an expression is evaluated in Freemarker tag libraries, enabling an attacker to execute arbitrary code via crafted parameter values.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-77"
+    ],
+    "published": "2017-07-07",
+    "vendor": "Apache",
+    "product": "Struts",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-12611"
+    ]
+  },
+  "CVE-2017-17485": {
+    "description": "FasterXML jackson-databind before 2.8.11 and 2.9.x before 2.9.3.1 allows unauthenticated remote code execution during polymorphic deserialization of Spring org.springframework.context.support.FileSystemXmlApplicationContext.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-502"
+    ],
+    "published": "2018-01-11",
+    "vendor": "FasterXML",
+    "product": "Jackson Databind",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-17485"
+    ]
+  },
+  "CVE-2017-5223": {
+    "description": "PHPMailer before 5.2.21 allows remote authenticated users or attackers to read arbitrary local files via a crafted parameter path when using sendmail or qmail binary transports.",
+    "cvss_v3": 7.5,
+    "severity": "high",
+    "cwe": [
+      "CWE-200"
+    ],
+    "published": "2017-01-09",
+    "vendor": "PHPMailer",
+    "product": "PHPMailer",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-5223"
+    ]
+  },
+  "CVE-2017-5645": {
+    "description": "Apache Log4j 2.x before 2.8.2 allows remote code execution when configured to use TCP or UDP socket servers with Java deserialization of untrusted input without adequate class filtering.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-502"
+    ],
+    "published": "2017-04-17",
+    "vendor": "Apache",
+    "product": "Log4j",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2017-5645"
+    ]
+  },
+  "CVE-2018-1270": {
+    "description": "Spring Framework 5.0 to 5.0.4 and 4.3 to 4.3.14 allows remote code execution over STOMP WebSockets via Spring SpEL expressions in broker configurations allowing clients to send messages to destination headers.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-94"
+    ],
+    "published": "2018-04-05",
+    "vendor": "Pivotal",
+    "product": "Spring Framework",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2018-1270"
+    ]
+  },
+  "CVE-2018-14574": {
+    "description": "Django 1.11.x before 1.11.15, 2.0.x before 2.0.8, and 2.1.x before 2.1.1 allows open redirect vulnerability via CommonMiddleware when APPEND_SLASH is True and a malicious URL with a leading slash is requested.",
+    "cvss_v3": 6.1,
+    "severity": "medium",
+    "cwe": [
+      "CWE-601"
+    ],
+    "published": "2018-08-01",
+    "vendor": "Django",
+    "product": "Django",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2018-14574"
+    ]
+  },
+  "CVE-2019-14234": {
+    "description": "Django 1.11.x before 1.11.23, 2.1.x before 2.1.11, and 2.2.x before 2.2.4 allows SQL injection in django.contrib.postgres.fields.JSONField and HStoreField key transformations when unvalidated keys are used in queries.",
+    "cvss_v3": 8.8,
+    "severity": "high",
+    "cwe": [
+      "CWE-89"
+    ],
+    "published": "2019-08-01",
+    "vendor": "Django",
+    "product": "Django",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2019-14234"
+    ]
+  },
+  "CVE-2020-11800": {
+    "description": "Zabbix 3.0.x before 3.0.31, 4.0.x before 4.0.22, 4.4.x before 4.4.10, and 5.0.0rc1 allows remote code execution via execute_script command injection in zabbix_server when handling internal message commands.",
+    "cvss_v3": 9.8,
+    "severity": "critical",
+    "cwe": [
+      "CWE-78"
+    ],
+    "published": "2020-04-16",
+    "vendor": "Zabbix",
+    "product": "Zabbix",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2020-11800"
+    ]
+  },
+  "CVE-2020-29599": {
+    "description": "ImageMagick before 6.9.11-40 and 7.x before 7.0.10-40 allows shell injection via crafted PDF with pipe command in ImageMagick delegates configuration, enabling arbitrary command execution.",
+    "cvss_v3": 8.8,
+    "severity": "high",
+    "cwe": [
+      "CWE-78"
+    ],
+    "published": "2020-12-07",
+    "vendor": "ImageMagick",
+    "product": "ImageMagick",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2020-29599"
+    ]
+  },
+  "CVE-2021-29505": {
+    "description": "XStream before 1.4.17 allows remote code execution when unmarshaling from untrusted sources due to inadequate blacklist restrictions on com.sun.corba.se.impl.activation.ServerTableEntry and other classes.",
+    "cvss_v3": 8.8,
+    "severity": "high",
+    "cwe": [
+      "CWE-502"
+    ],
+    "published": "2021-05-26",
+    "vendor": "XStream",
+    "product": "XStream",
+    "exploit_available": true,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2021-29505"
+    ]
+  },
+  "CVE-2026-97229": {
+    "description": "Ruby Rexical gem command injection vulnerability via crafted grammar file input containing metacharacters passed to file operations without sanitization.",
+    "cvss_v3": 8.8,
+    "severity": "high",
+    "cwe": [
+      "CWE-78"
+    ],
+    "published": "2026-01-15",
+    "vendor": "Ruby",
+    "product": "Rexical",
+    "exploit_available": false,
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-97229"
     ]
   }
 }

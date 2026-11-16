@@ -20,6 +20,20 @@ export class ApiError extends Error {
   }
 }
 
+function responseErrorMessage(body: unknown, fallback: string): string {
+  if (!body || typeof body !== "object") return fallback;
+  const detail = (body as { detail?: unknown }).detail;
+  if (typeof detail === "string") return detail;
+  if (detail && typeof detail === "object" && typeof (detail as { message?: unknown }).message === "string") {
+    return (detail as { message: string }).message;
+  }
+  try {
+    return JSON.stringify(detail ?? body);
+  } catch {
+    return fallback;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
@@ -40,7 +54,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     let detail = res.statusText;
     try {
       const body = await res.json();
-      detail = body.detail || JSON.stringify(body);
+      detail = responseErrorMessage(body, detail);
     } catch {
       /* ignore parse failure */
     }
@@ -70,7 +84,7 @@ export async function downloadFile(path: string, fallbackName = "download") {
     let detail = res.statusText;
     try {
       const body = await res.json();
-      detail = body.detail || JSON.stringify(body);
+      detail = responseErrorMessage(body, detail);
     } catch {
       /* ignore parse failure */
     }

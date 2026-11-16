@@ -51,6 +51,28 @@ def generate_docx_report(data: dict, output_path: str):
             )
         doc.add_paragraph(summary_text)
 
+        doc.add_heading("Severity Distribution", level=1)
+        chart = doc.add_table(rows=1, cols=3)
+        chart.style = "Light Grid Accent 1"
+        for i, heading in enumerate(["Severity", "Findings", "Share"]):
+            chart.rows[0].cells[i].text = heading
+        total = max(s["total_vulnerabilities"], 1)
+        for level in ("critical", "high", "medium", "low", "info"):
+            row = chart.add_row().cells
+            count = s["severity_counts"].get(level, 0)
+            row[0].text = level.upper()
+            row[1].text = str(count)
+            row[2].text = f"{count / total:.1%}"
+
+        doc.add_heading("Exposure Signals", level=1)
+        exposure = doc.add_table(rows=1, cols=3)
+        exposure.style = "Light Grid Accent 1"
+        for i, heading in enumerate(["Signal", "Findings", "Share of Findings"]):
+            exposure.rows[0].cells[i].text = heading
+        for label, count in (("Known Exploited (CISA KEV)", s["kev_count"]), ("Exploit Available", s["exploitable_count"])):
+            row = exposure.add_row().cells
+            row[0].text, row[1].text, row[2].text = label, str(count), f"{count / total:.1%}"
+
         doc.add_heading("Top Risk Findings", level=1)
         t = doc.add_table(rows=1, cols=4)
         t.style = "Light Grid Accent 1"

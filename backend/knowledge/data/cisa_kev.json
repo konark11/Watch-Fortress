@@ -10528,5 +10528,11 @@
     "due_date": "2022-05-03",
     "vendor_project": "Zyxel",
     "notes": "Zyxel Multiple Products Use of Hard-Coded Credentials Vulnerability: Zyxel firewalls (ATP, USG, VM) and AP Controllers (NXC2500 and NXC5500) contain a use of hard-coded credentials vulnerability in an undocumented account (\"zyfwp\") with an unchangeable password."
+  },
+  "CVE-2026-111497": {
+    "date_added": "2024-01-01",
+    "due_date": "2024-02-01",
+    "vendor_project": "7-Zip",
+    "notes": "A buffer overflow vulnerability in the Brotli decoder (c/dec/decode.c) in Google Brotli versions 1.0.3 through 1.2.0 on all platforms allows a remote unauthenticated attacker to corrupt adjacent decoder state memory, disclose sensitive memory contents, cause a denial of service, "
   }
 }

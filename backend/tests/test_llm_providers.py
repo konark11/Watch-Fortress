@@ -87,6 +87,23 @@ def test_openrouter_reranker_uses_rerank_endpoint(monkeypatch):
     }
 
 
+def test_reranker_rotates_to_jina_after_openrouter_rate_limit(monkeypatch):
+    import rag.reranker as reranker
+
+    monkeypatch.setattr(reranker, "RERANK_MODEL", "reranker:free")
+    monkeypatch.setattr(reranker, "JINA_API_KEY", "jina-key")
+    monkeypatch.setattr(reranker, "JINA_MODEL", "jina-reranker")
+    monkeypatch.setattr(reranker, "_cursor", 0)
+    monkeypatch.setattr(reranker, "_states", {})
+    monkeypatch.setattr(reranker, "_stats", {"attempts": 0, "successes": 0, "failures": 0, "fallbacks": 0})
+    monkeypatch.setattr(reranker, "openrouter_rerank", lambda *_: (_ for _ in ()).throw(
+        urllib.error.HTTPError("https://openrouter.invalid", 429, "rate", {}, None)
+    ))
+    monkeypatch.setattr(reranker, "_jina_rerank", lambda query, documents: [0.7] * len(documents))
+    assert reranker.rerank("q", ["evidence"]) == [0.7]
+    assert reranker.status()["stats"]["fallbacks"] == 1
+
+
 def test_online_does_not_use_groq_keys(monkeypatch):
     providers = load_provider(
         monkeypatch, RAG_GENERATION_PROVIDER="online",
@@ -127,6 +144,28 @@ def test_groq_rotates_after_retryable_429(monkeypatch):
         ("Bearer key-a", "Watch-Fortress/1.0"),
         ("Bearer key-b", "Watch-Fortress/1.0"),
     ]
+
+
+def test_general_generation_uses_general_knowledge_prompt(monkeypatch):
+    providers = load_provider(
+        monkeypatch, RAG_GENERATION_PROVIDER="groq",
+        GROQ_API_KEYS="key-a", GROQ_MODEL="gpt-oss",
+    )
+    captured = {}
+
+    class Response:
+        def __enter__(self): return self
+        def __exit__(self, *_): return False
+        def read(self): return json.dumps({"choices": [{"message": {"content": "definition"}}]}).encode()
+
+    def fake_urlopen(request, timeout):
+        captured.update(json.loads(request.data))
+        return Response()
+
+    monkeypatch.setattr(providers.urllib.request, "urlopen", fake_urlopen)
+    assert providers.GroqProvider().generate_general("What does CVSS mean?") == "definition"
+    assert "general security" in captured["messages"][0]["content"]
+    assert captured["messages"][1]["content"] == "Question: What does CVSS mean?"
 
 
 def test_non_retryable_auth_failure_does_not_rotate(monkeypatch):

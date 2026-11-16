@@ -61,6 +61,13 @@ def _preload_embeddings_enabled() -> bool:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    from knowledge.updater import seed_reference_playbooks
+    from workers.embedded import start as start_embedded_worker, stop as stop_embedded_worker
+
+    seeded_count = seed_reference_playbooks()
+    if seeded_count:
+        logger.info("seeded %s reference knowledge-base documents", seeded_count)
+
     if _preload_embeddings_enabled():
         from rag.embeddings import warmup_embeddings
         try:
@@ -72,7 +79,11 @@ async def lifespan(_app: FastAPI):
             )
         except Exception:
             logger.exception("rag embedding preload failed; deterministic fallback remains available")
-    yield
+    embedded_worker = start_embedded_worker()
+    try:
+        yield
+    finally:
+        stop_embedded_worker(embedded_worker)
 
 app = FastAPI(
     title="Watch Fortress",

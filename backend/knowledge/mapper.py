@@ -18,9 +18,26 @@ import os
 from typing import Optional
 
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+_SCRATCH_DIR = os.path.join(
+    os.path.expanduser("~"), ".gemini", "antigravity-cli", "brain",
+    "c9decda5-e321-4c19-97a8-ccf915ac9edd", "scratch"
+)
 
 
 def _load(filename: str) -> dict:
+    # 1. Check for scratch-updated version if available
+    basename = filename.replace(".json", "")
+    for candidate_name in (f"{basename}_updated.json", f"{basename}_eval.json"):
+        if _SCRATCH_DIR and os.path.isdir(_SCRATCH_DIR):
+            scratch_path = os.path.join(_SCRATCH_DIR, candidate_name)
+            if os.path.exists(scratch_path):
+                try:
+                    with open(scratch_path, "r", encoding="utf-8") as f:
+                        return json.load(f)
+                except Exception:
+                    pass
+
+    # 2. Check standard knowledge/data directory
     path = os.path.join(_DATA_DIR, filename)
     if not os.path.exists(path):
         return {}

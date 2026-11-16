@@ -132,6 +132,23 @@ def build_corpus(db: Session | None = None) -> list[dict]:
                     f"CVEs: {cves}). Description: {finding.description or 'not provided'} "
                     f"Remediation: {finding.solution or 'not provided'}"
                 )
+
+            clean_target = scan.target.split("://")[-1].split("/")[0].split(":")[0].strip().lower()
+            asset = db.query(Asset).filter(
+                (Asset.ip_address.ilike(clean_target)) | (Asset.hostname.ilike(clean_target))
+            ).first()
+            if not asset and clean_target:
+                asset = db.query(Asset).filter(
+                    (Asset.hostname.ilike(f"%{clean_target}%")) | (Asset.ip_address.ilike(f"%{clean_target}%"))
+                ).first()
+            port_lines = []
+            if asset and asset.ports:
+                port_lines = [
+                    f"{p.port_number}/{p.protocol} ({p.service_name or 'unknown'}{' ' + p.product if p.product else ''}{' ' + p.version if p.version else ''})".strip()
+                    for p in asset.ports
+                ]
+            ports_summary = f"Discovered open ports on {scan.target}: {', '.join(port_lines)}." if port_lines else "Discovered open ports: none recorded."
+
             docs.append({
                 "id": f"scan:{scan.id}",
                 "source": "Completed scan",
@@ -140,6 +157,7 @@ def build_corpus(db: Session | None = None) -> list[dict]:
                     f"Scan {scan.name} targeted {scan.target}. Scanner: {scan.scanner_type.value}. "
                     f"Status: {scan.status.value}. Findings: {scan.findings_count}. "
                     f"Hosts with findings: {', '.join(hosts) or 'none'}. "
+                    f"{ports_summary} "
                     f"Completed: {scan.finished_at or 'unknown'}. "
                     f"Finding details: {' '.join(finding_lines) or 'No findings were reported.'}"
                 ),

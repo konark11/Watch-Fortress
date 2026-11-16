@@ -20,6 +20,12 @@
   .critical { background: #d92d3f; } .high { background: #e8792f; }
   .medium { background: #e0b127; color:#333 } .low { background: #4f9ecf; } .info { background: #999; }
   .tag { display: inline-block; background: #eef2f9; border-radius: 4px; padding: 1px 6px; margin: 1px; font-size: 10.5px; }
+  .chart { margin: 12px 0 24px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin: 7px 0; font-size: 12px; }
+  .bar-label { width: 170px; text-align: right; color: #475467; }
+  .bar-track { flex: 1; height: 14px; background: #eef2f6; border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; min-width: 2px; }
+  .bar-value { width: 28px; color: #475467; }
   .footer { margin-top: 40px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
 </style>
 </head>
@@ -41,6 +47,29 @@
 <strong>{{ data.summary.total_assets }}</strong> assets, including <strong>{{ data.summary.severity_counts.critical }} critical</strong>
 and <strong>{{ data.summary.severity_counts.high }} high</strong> severity findings.
 {% if data.summary.kev_count > 0 %}<strong>{{ data.summary.kev_count }}</strong> of these are listed in the CISA Known Exploited Vulnerabilities catalog and represent active, real-world attacker interest — remediation should be prioritized accordingly.{% endif %}</p>
+
+<h2>Severity Distribution</h2>
+{% set chart_total = data.summary.total_vulnerabilities or 1 %}
+<div class="chart">
+{% for level, color in [('critical', '#d92d3f'), ('high', '#e8792f'), ('medium', '#e0b127'), ('low', '#4f9ecf'), ('info', '#999999')] %}
+  <div class="bar-row">
+    <div class="bar-label">{{ level|upper }}</div>
+    <div class="bar-track"><div class="bar-fill" style="width: {{ ((data.summary.severity_counts[level] / chart_total) * 100)|round(1) }}%; background: {{ color }};"></div></div>
+    <div class="bar-value">{{ data.summary.severity_counts[level] }}</div>
+  </div>
+{% endfor %}
+</div>
+
+<h2>Exposure Signals</h2>
+<div class="chart">
+{% for label, value, color in [('Known Exploited (CISA KEV)', data.summary.kev_count, '#d92d3f'), ('Exploit Available', data.summary.exploitable_count, '#e8792f')] %}
+  <div class="bar-row">
+    <div class="bar-label">{{ label }}</div>
+    <div class="bar-track"><div class="bar-fill" style="width: {{ ((value / chart_total) * 100)|round(1) }}%; background: {{ color }};"></div></div>
+    <div class="bar-value">{{ value }}</div>
+  </div>
+{% endfor %}
+</div>
 
 <h2>Top Risk Findings</h2>
 <table>

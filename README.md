@@ -172,10 +172,13 @@ For hosted generation, set `VULN_RAG_MODE=openrouter` and provide
 `poolside/laguna-s-2.1:free`; change `OPENROUTER_MODEL` only to another
 OpenRouter model ending in `:free`. Optional embedding and reranking adapters are configured with
 `OPENROUTER_EMBEDDING_MODEL` and `OPENROUTER_RERANK_MODEL` and use the same
-key. The active retrieval path first uses local TF-IDF to build a broad
-candidate set, then uses `OPENROUTER_RERANK_MODEL` when configured to score
-the candidates and pass the best matches to the answer generator. This is an
-optional query-document scoring stage, not a local `CrossEncoder` package;
+key. Configure `JINA_API_KEY`, `JINA_RERANKER_MODEL`, and `JINA_BASE_URL` as a
+health-aware failover provider. When both providers are configured, healthy
+rerankers rotate per request; retryable failures are bounded and temporarily
+circuit-broken. The active retrieval path first uses local TF-IDF to build a
+broad candidate set, then uses the reranker pool to score the candidates and
+pass the best matches to the answer generator. This is an optional
+query-document scoring stage, not a local `CrossEncoder` package;
 the default remains fully offline and uses no key. `OPENROUTER_EMBEDDING_MODEL`
 is available for future dense-retrieval deployments but is not needed by the
 current local index. No paid model is selected or accepted by these adapters.
@@ -214,9 +217,15 @@ printing credentials.
 Live scans are persisted as `background_jobs` and executed by a separate
 worker. The API returns a scan ID and job ID immediately; progress and events
 are read from the database, so an API restart does not lose queued work.
-PostgreSQL is required for multi-worker durability and row locking. SQLite
-remains a portable single-process development mode and does not provide the
-same queue safety.
+The API accepts a live scan only while a worker has a healthy, recent
+heartbeat; it returns a clear service-unavailable response instead of creating
+a job that cannot start. PostgreSQL is required for multi-worker durability
+and row locking, and PostgreSQL deployments must run the separate worker
+service (`python -m workers.run`). SQLite remains a portable single-process
+development mode: the API starts an embedded worker automatically, so
+launching the API alone is enough once its heartbeat is ready. Set
+`JOB_EMBEDDED_WORKER_ENABLED=false` only when intentionally managing the
+standalone worker yourself.
 
 ```bash
 # Local development (single process/SQLite)

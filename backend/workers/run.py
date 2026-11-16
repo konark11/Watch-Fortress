@@ -75,6 +75,7 @@ def _safe_payload(job) -> dict:
                 "profile", "severity_profile", "tags", "timeout_seconds",
                 "automatic_scan",
                 "poll_interval_seconds", "script_name", "extra_args", "template_uuid",
+                "concurrency", "rate_limit", "resolve_dns", "timeout",
             }
         }
     elif job.job_type == "report.generate":
@@ -119,14 +120,17 @@ def _execute_scan(db, job, payload: dict, worker_id: str) -> dict:
     db.commit()
     last_persisted = [0, 0.0]
 
-    def progress(pct: int, message: str) -> None:
+    def progress(pct: int, message: str, findings_count: Optional[int] = None) -> None:
         _check_cancelled(db, job)
         now = time.monotonic()
-        if pct < 100 and pct - last_persisted[0] < 5 and now - last_persisted[1] < 2:
+        findings_changed = findings_count is not None and findings_count != scan.findings_count
+        if pct < 100 and pct - last_persisted[0] < 5 and now - last_persisted[1] < 2 and not findings_changed:
             return
         last_persisted[:] = [pct, now]
         heartbeat(db, job, worker_id, int(os.environ.get("JOB_LEASE_SECONDS", "300")))
         scan.progress_pct = max(0, min(100, pct))
+        if findings_count is not None:
+            scan.findings_count = findings_count
         db.commit()
         update_progress(db, job, pct, message)
 
@@ -147,9 +151,9 @@ def _execute_scan(db, job, payload: dict, worker_id: str) -> dict:
     with open(output_path, "w", encoding="utf-8") as output_file:
         output_file.write(str(raw_output))
     scan.raw_output_path = output_path
-    scan.progress_pct = 100
-    scan.status = ScanStatus.COMPLETED
-    scan.finished_at = utcnow()
+    scan.progress_pct = 95
+    scan.status = ScanStatus.RUNNING
+    scan.finished_at = None
     db.commit()
     from jobs.repository import enqueue
     ingest_job = enqueue(
@@ -174,6 +178,9 @@ def _ingest_scan(db, job, payload: dict) -> dict:
     with open(path, encoding="utf-8", errors="replace") as input_file:
         raw_output = input_file.read()
     summary = ingest_scan_result(db, scan, raw_output, str(payload.get("filename", "")))
+    scan.progress_pct = 100
+    scan.status = ScanStatus.COMPLETED
+    scan.finished_at = utcnow()
     from jobs.repository import enqueue
     reindex_job = enqueue(
         db,
@@ -257,13 +264,13 @@ def run_once(worker_id: str | None = None) -> bool:
         except Exception as exc:
             db.rollback()
             job = db.get(type(job), job.id)
-            if job.job_type == "scan.execute" and job.attempt_count >= job.max_attempts:
+            if job.job_type in {"scan.execute", "scan.ingest"} and job.attempt_count >= job.max_attempts:
                 scan = db.get(Scan, job.scan_id) if job.scan_id else None
                 if scan:
                     scan.status = ScanStatus.FAILED
-                    scan.error_message = "Background scan failed; inspect the job error summary."
+                    scan.error_message = str(exc)[:500] if str(exc) else f"{type(exc).__name__} while processing job"
                     scan.finished_at = utcnow()
-            fail_or_retry(db, job, "worker_failure", f"{type(exc).__name__} while processing job")
+            fail_or_retry(db, job, "worker_failure", f"{type(exc).__name__}: {str(exc)[:400]}" if str(exc) else f"{type(exc).__name__} while processing job")
             observe(job_duration, time.monotonic() - started, job.job_type, "failed")
             logger.error(
                 "job failed job_id=%s job_type=%s attempt=%s correlation_id=%s",

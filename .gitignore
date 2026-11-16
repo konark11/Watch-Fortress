@@ -15,3 +15,7 @@ graphify-out/
 .env
 run_online.sh
 .DS_Store
+backend/scratch_test_route.py
+backend/test_port_queries.py
+backend/test_user_queries.py
+backend/knowledge/data/test_agent.json

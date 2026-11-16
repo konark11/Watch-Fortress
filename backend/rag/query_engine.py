@@ -21,8 +21,10 @@ import re
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, text
 
-from models.database import Vulnerability, Finding, Asset, Scan, ScanStatus, Severity
+from models.database import Vulnerability, Finding, Asset, Port, Scan, ScanStatus, Severity
+from knowledge.mapper import kb
 from rag.retriever import HybridRetriever
+from rag.relevance import normalize_security_query
 from rag.embeddings import active_embedding_metadata, embed_texts
 from rag.llm_providers import get_provider, provider_status, validate_provider_configuration
 from rag.internet_lookup import lookup_question
@@ -79,6 +81,8 @@ _EXAMPLE_QUESTIONS = [
 
 _KNOWN_VULNERABILITY_ALIASES = {
     "terrapin": {"terrapin", "cve-2023-48795"},
+    "openssh terrapin": {"openssh terrapin", "terrapin", "cve-2023-48795"},
+    "terrapin attack": {"terrapin attack", "terrapin", "cve-2023-48795"},
     "log4shell": {"log4shell", "cve-2021-44228"},
     "heartbleed": {"heartbleed", "cve-2014-0160"},
     "shellshock": {"shellshock", "cve-2014-6271"},
@@ -88,6 +92,48 @@ _KNOWN_VULNERABILITY_ALIASES = {
     "eternalblue": {"eternalblue", "cve-2017-0144"},
     "bluekeep": {"bluekeep", "cve-2019-0708"},
 }
+
+_ANAPHORA_OR_ATTR_PATTERN = re.compile(
+    r"\b(?:this|it|that|the vulnerability|the vuln|the cve|the bug|the issue|"
+    r"explain|tell me|describe|"
+    r"cvss|score|severity|fix|patch|remediat|mitigat|exploit|exploitable|kev|cisa|affected|version|impact|cwe)\b",
+    re.IGNORECASE,
+)
+
+
+def resolve_focal_context(
+    question: str,
+    history: list[dict] | None = None,
+) -> tuple[str, str | None]:
+    """Resolve explicit or inherited focal vulnerability target from the dialogue."""
+    normalized_q = normalize_security_query(question)
+    cve_direct = re.search(r"\bCVE-\d{4}-\d{4,7}\b", normalized_q, re.IGNORECASE)
+    if cve_direct:
+        return normalized_q, cve_direct.group(0).upper()
+
+    lowered = normalized_q.lower()
+    for alias, cve_set in _KNOWN_VULNERABILITY_ALIASES.items():
+        if alias in lowered:
+            for item in cve_set:
+                if item.startswith("cve-"):
+                    return normalized_q, item.upper()
+
+    if _ANAPHORA_OR_ATTR_PATTERN.search(normalized_q) and history:
+        for turn in reversed(history[-12:]):
+            content = normalize_security_query(turn.get("content", ""))
+            match = re.search(r"\bCVE-\d{4}-\d{4,7}\b", content, re.IGNORECASE)
+            if match:
+                active_cve = match.group(0).upper()
+                return f"{normalized_q} (referring to {active_cve})", active_cve
+            content_lower = content.lower()
+            for alias, cve_set in _KNOWN_VULNERABILITY_ALIASES.items():
+                if alias in content_lower:
+                    for item in cve_set:
+                        if item.startswith("cve-"):
+                            active_cve = item.upper()
+                            return f"{normalized_q} (referring to {active_cve})", active_cve
+
+    return normalized_q, None
 
 
 def _greeting_or_help_answer(db: Session, is_help: bool) -> dict:
@@ -173,7 +219,7 @@ def _rerank_candidates(
     try:
         scores = rerank(question, [doc["text"] for doc, _ in candidates])
     except (ImportError, RuntimeError, ValueError, TypeError, OSError) as exc:
-        logger.warning("OpenRouter reranking unavailable: %s", exc)
+        logger.warning("Reranking unavailable; using hybrid retrieval order: %s", exc)
         return retrieved[:k]
     reranked = sorted(
         zip((doc for doc, _ in candidates), scores),
@@ -211,6 +257,15 @@ def _is_recent_scan_question(question: str) -> bool:
 
 def _is_mitigation_follow_up(question: str) -> bool:
     q = question.lower()
+    # If the user asks for explanation, difficulty assessment, or about a specific vulnerability/CVE,
+    # let RAG/LLM handle it with rich context instead of returning a static scan findings list.
+    if any(term in q for term in ("what is", "why", "how difficult", "explain", "tell me", "brother", "details", "strategy")):
+        return False
+    if any(alias in q for alias in _KNOWN_VULNERABILITY_ALIASES):
+        return False
+    if re.search(r"\bcve-\d{4}-\d{4,7}\b", q):
+        return False
+    # Only match generic scan mitigation questions
     return any(term in q for term in ("mitigate", "mitigation", "remediate", "remediation", "fix", "resolve"))
 
 
@@ -229,24 +284,40 @@ def _is_explanation_follow_up(question: str) -> bool:
     return bool(re.search(r"\b(why|how come|what caused|what does that mean)\b", q))
 
 
-def _metadata_filter(question: str):
+def _is_scan_priority_follow_up(question: str) -> bool:
+    q = question.lower().strip()
+    if any(term in q for term in ("what is the cve", "which cve", "what cve", "cve id", "the cve")):
+        return False
+    priority_terms = (
+        "important", "priority", "priorities", "prioritize", "care about",
+        "care most", "fix first", "highest severity", "most critical",
+        "top finding", "top priority", "worst finding", "worst issue",
+        "which finding", "what finding", "main finding", "key finding",
+        "first finding", "focus on", "most dangerous", "critical finding",
+    )
+    return any(term in q for term in priority_terms)
+
+
+def _metadata_filter(question: str, active_cve: str | None = None):
     """Build pre-retrieval filters from explicit security metadata in a query."""
-    lowered = question.lower()
+    lowered = normalize_security_query(question).lower()
     severity = next((value for value in SEVERITIES if value in lowered), None)
     port_match = re.search(r"\bport\s+(\d{1,5})\b", lowered)
     cve_match = re.search(r"\bcve-\d{4}-\d{4,7}\b", lowered, re.IGNORECASE)
+    target_cve = cve_match.group(0).lower() if cve_match else (active_cve.lower() if active_cve else None)
     vm_match = re.search(
         r"\b(?:vm|host|asset|ip)\s+((?:\d{1,3}\.){3}\d{1,3})\b",
         lowered,
     )
+    scan_doc_type = "Completed scan" if ("scan" in lowered and not any(term in lowered for term in ("port", "ports", "service", "open"))) else None
     document_type = next((
         source for term, source in {
-            "cve": "CVE", "cwe": "CWE", "capec": "CAPEC",
+            "cwe": "CWE", "capec": "CAPEC",
             "owasp": "OWASP", "mitre": "MITRE ATT&CK",
-            "finding": "Scan finding", "scan": "Completed scan",
+            "finding": "Scan finding",
         }.items() if term in lowered
-    ), None)
-    if not any((severity, port_match, cve_match, vm_match, document_type)):
+    ), scan_doc_type)
+    if not any((severity, port_match, target_cve, vm_match, document_type)):
         return None
 
     def matches(doc: dict) -> bool:
@@ -262,7 +333,7 @@ def _metadata_filter(question: str):
             return False
         if port_match and port_match.group(1) not in text:
             return False
-        if cve_match and cve_match.group(0).lower() not in text:
+        if target_cve and target_cve not in text:
             return False
         if vm_match and vm_match.group(1) not in text:
             return False
@@ -271,28 +342,27 @@ def _metadata_filter(question: str):
     return matches
 
 
-def _named_vulnerability_terms(question: str) -> set[str]:
+def _named_vulnerability_terms(question: str, active_cve: str | None = None) -> set[str]:
     """Return identifiers that must be present in evidence for specific asks."""
-    lowered = question.lower()
+    lowered = normalize_security_query(question).lower()
     terms: set[str] = set(re.findall(r"\bcve-\d{4}-\d{4,7}\b", lowered))
-    known_match = False
+    if active_cve:
+        terms.add(active_cve.lower())
     for name, aliases in _KNOWN_VULNERABILITY_ALIASES.items():
         if name in lowered:
             terms.update(aliases)
-            known_match = True
-    if terms or known_match:
-        return terms
-    words = re.findall(r"\b[A-Z][A-Za-z0-9.+-]{3,}\b", question)
-    ignored = {"Explain", "What", "How", "Why", "Attack", "Vulnerability"}
-    terms.update(word.lower() for word in words if word not in ignored)
+    for keywords in VULN_TYPE_KEYWORDS.values():
+        if any(keyword in lowered for keyword in keywords):
+            terms.update(keywords)
     return terms
 
 
 def _has_named_vulnerability_evidence(
     question: str,
     retrieved: list[tuple[dict, float]],
+    active_cve: str | None = None,
 ) -> bool:
-    terms = _named_vulnerability_terms(question)
+    terms = _named_vulnerability_terms(question, active_cve)
     if not terms:
         return True
     for document, _ in retrieved:
@@ -308,8 +378,6 @@ def _has_adequate_local_evidence(
 ) -> bool:
     if not retrieved:
         return False
-    if retrieved[0][1] >= 0.08:
-        return True
     stopwords = {
         "and", "are", "does", "how", "is", "it", "should", "the", "this",
         "to", "what", "why",
@@ -327,26 +395,114 @@ def _has_adequate_local_evidence(
     return False
 
 
+def _is_conceptual_question(question: str) -> bool:
+    q = question.lower().strip()
+    if re.search(r"\bcve-\d{4}-\d{4,7}\b", q):
+        return False
+    # Check for explanatory/conceptual inquiry patterns
+    if re.search(r"\b(?:what is|what are|what does|why is|why do|how does|explain|tell me about|meaning of|definition of)\b", q):
+        # If it specifically asks for host listing: "which hosts", "what hosts have", "how many hosts"
+        if re.search(r"\b(?:which|what|how many)\s+(?:hosts?|systems?|assets?|machines?|ips?|servers?)\b", q):
+            return False
+        # If it specifically targets an IP or domain: "on 192.168.1.1", "in scanme.nmap.org"
+        if re.search(r"\b(?:on|for|against|in)\s+(?:\d{1,3}(?:\.\d{1,3}){3}|[a-z0-9.-]+\.[a-z]{2,})\b", q):
+            return False
+        # If it's asking how many are opened: "how many port 80 are opened"
+        if "how many" in q and ("open" in q or "opened" in q):
+            return False
+        return True
+    return False
+
+
+def _is_general_question(question: str, active_cve: str | None = None) -> bool:
+    """Identify stable conceptual questions that should not use weak CVE context."""
+    if active_cve:
+        return False
+    lowered = normalize_security_query(question).lower().strip()
+    if (
+        re.search(r"\bcve-\d{4}-\d{4,7}\b", lowered)
+        or any(alias in lowered for alias in _KNOWN_VULNERABILITY_ALIASES)
+        or _looks_like_data_question(question)
+        or re.search(r"\b(?:scan|finding|asset|host|ip address|cve)\b", lowered)
+    ):
+        return False
+    if _is_conceptual_question(question):
+        return True
+    if re.search(r"\b(?:what is|what does|how does|define|explain)\b", lowered):
+        return True
+    return False
+
+
+def _scope_retrieved_evidence(
+    question: str,
+    retrieved: list[tuple[dict, float]],
+    active_cve: str | None = None,
+) -> tuple[list[tuple[dict, float]], str | None]:
+    """Keep generation context aligned with an explicit vulnerability target."""
+    cve_target = active_cve
+    if not cve_target:
+        cve_match = re.search(r"\bcve-\d{4}-\d{4,7}\b", normalize_security_query(question), re.IGNORECASE)
+        if cve_match:
+            cve_target = cve_match.group(0).upper()
+    if not cve_target:
+        return retrieved, None
+    target = cve_target.lower()
+    scoped = [
+        (document, score)
+        for document, score in retrieved
+        if target in f"{document.get('id', '')} {document.get('title', '')} {document.get('text', '')}".lower()
+    ]
+    if not scoped and retrieved:
+        lowered_q = normalize_security_query(question).lower()
+        matched_aliases = [alias for alias in _KNOWN_VULNERABILITY_ALIASES if alias in lowered_q]
+        if matched_aliases:
+            scoped = [
+                (doc, score)
+                for doc, score in retrieved
+                if any(alias in f"{doc.get('title', '')} {doc.get('text', '')}".lower() for alias in matched_aliases)
+            ]
+    return (scoped or retrieved)[:FINAL_EVIDENCE_K], cve_target
+
+
+def _answer_mentions_unrequested_cve(answer: str, target_cve: str | None) -> bool:
+    if not target_cve:
+        return False
+    mentioned = {
+        value.upper()
+        for value in re.findall(r"\bCVE-\d{4}-\d{4,7}\b", answer, re.IGNORECASE)
+    }
+    if not mentioned:
+        return False
+    # Only treat as unrequested if the target CVE was completely omitted
+    # and only other CVEs were discussed
+    return target_cve.upper() not in mentioned
+
+
 def _should_use_nvd_fallback(
     retrieved: list[tuple[dict, float]],
     previous_user_questions: list[str],
     named_query: bool = False,
     local_evidence_adequate: bool = False,
+    active_cve: str | None = None,
 ) -> bool:
-    return (
-        (not retrieved or (
-            retrieved[0][1] < 0.08
-            and not named_query
-            and not local_evidence_adequate
-        ))
-        and not previous_user_questions
-    )
+    if not named_query or retrieved or local_evidence_adequate:
+        return False
+    # Always allow NVD lookup on the first question in a conversation.
+    if not previous_user_questions:
+        return True
+    # Also allow NVD lookup on follow-up turns when the query targets a
+    # specific CVE (explicit or resolved from an alias like "Terrapin").
+    # This prevents "couldn't find grounded local evidence" when the user
+    # asks a follow-up about a named vulnerability that isn't in local RAG.
+    if active_cve:
+        return True
+    return False
 
 
-def _metadata_criteria(question: str) -> dict:
-    lowered = question.lower()
+def _metadata_criteria(question: str, active_cve: str | None = None) -> dict:
+    lowered = normalize_security_query(question).lower()
     criteria: dict = {}
-    severity = next((value for value in SEVERITIES if value in lowered), None)
+    severity = next((value for value in SEVERITIES if re.search(r"\b" + re.escape(value) + r"\b", lowered)), None)
     if severity:
         criteria["severity"] = severity
     port_match = re.search(r"\bport\s+(\d{1,5})\b", lowered)
@@ -354,20 +510,25 @@ def _metadata_criteria(question: str) -> dict:
         criteria["port"] = int(port_match.group(1))
     cve_match = re.search(r"\bcve-\d{4}-\d{4,7}\b", lowered, re.IGNORECASE)
     if cve_match:
-        criteria["cve"] = cve_match.group(0)
+        criteria["cve"] = cve_match.group(0).upper()
+    elif active_cve:
+        criteria["cve"] = active_cve.upper()
     vm_match = re.search(
         r"\b(?:vm|host|asset|ip)\s+((?:\d{1,3}\.){3}\d{1,3})\b",
         lowered,
     )
     if vm_match:
         criteria["vm"] = vm_match.group(1)
-    criteria["document_type"] = next((
-        source for term, source in {
-            "cve": "CVE", "cwe": "CWE", "capec": "CAPEC",
-            "owasp": "OWASP", "mitre": "MITRE ATT&CK",
-            "finding": "Scan finding", "scan": "Completed scan",
-        }.items() if term in lowered
-    ), None)
+    if re.search(r"\bscan\b", lowered) and not any(re.search(r"\b" + term + r"\b", lowered) for term in ("port", "ports", "service", "open")):
+        criteria["document_type"] = "Completed scan"
+    else:
+        criteria["document_type"] = next((
+            source for term, source in {
+                "cwe": "CWE", "capec": "CAPEC",
+                "owasp": "OWASP", "mitre": "MITRE ATT&CK",
+                "finding": "Scan finding",
+            }.items() if re.search(r"\b" + re.escape(term) + r"\b", lowered)
+        ), None)
     return {key: value for key, value in criteria.items() if value is not None}
 
 
@@ -386,12 +547,123 @@ def production_retrieve(db: Session, question: str, k: int) -> list[tuple[dict, 
 
 
 def _latest_problematic_scan(db: Session) -> Scan | None:
-    return (
+    scan = (
         db.query(Scan)
         .filter(Scan.status == ScanStatus.COMPLETED, Scan.findings_count > 0)
         .order_by(Scan.finished_at.desc(), Scan.id.desc())
         .first()
     )
+    if scan is None:
+        scan = (
+            db.query(Scan)
+            .filter(Scan.status == ScanStatus.COMPLETED)
+            .order_by(Scan.finished_at.desc(), Scan.id.desc())
+            .first()
+        )
+    return scan
+
+
+def _find_contextual_scan(db: Session, history: list[dict] | None = None) -> Scan | None:
+    if history:
+        for turn in reversed(history[-12:]):
+            content = turn.get("content", "")
+            targets = re.findall(r"\b[a-z0-9][a-z0-9.-]*\.[a-z]{2,}\b|\b\d{1,3}(?:\.\d{1,3}){3}\b", content.lower())
+            for target in targets:
+                scan = (
+                    db.query(Scan)
+                    .filter(Scan.status == ScanStatus.COMPLETED, Scan.findings_count > 0, Scan.target.ilike(f"%{target}%"))
+                    .order_by(Scan.finished_at.desc(), Scan.id.desc())
+                    .first()
+                )
+                if scan:
+                    return scan
+    return _latest_problematic_scan(db)
+
+
+def _answer_recent_scan_priorities(db: Session, question: str, history: list[dict] | None = None) -> dict:
+    scan = _find_contextual_scan(db, history)
+    if scan is None:
+        return _answer_recent_scan_question(db, problematic_only=True)
+    findings = list(scan.findings)
+    if not findings:
+        return _answer_recent_scan_question(db, problematic_only=True)
+
+    severity_weight = {
+        Severity.CRITICAL: 5,
+        Severity.HIGH: 4,
+        Severity.MEDIUM: 3,
+        Severity.LOW: 2,
+        Severity.INFO: 1,
+    }
+    sorted_findings = sorted(
+        findings,
+        key=lambda f: (
+            severity_weight.get(f.severity, 0),
+            f.cvss_score or 0.0,
+            1 if f.cve_ids else 0,
+            f.id,
+        ),
+        reverse=True,
+    )
+    top_finding = sorted_findings[0]
+    top_cves = ", ".join(top_finding.cve_ids or []) or "no CVE recorded"
+    port_str = f":{top_finding.port_number}" if top_finding.port_number else ""
+    loc_str = f"{top_finding.asset_ip or 'unknown host'}{port_str}"
+
+    remediation = top_finding.solution
+    if not remediation or not remediation.strip():
+        remediation = "Apply the vendor patch or upgrade the vulnerable software/service, restrict unnecessary exposure, and rerun the scan to verify closure."
+    else:
+        remediation = " ".join(remediation.split())
+
+    lines = [
+        f"The most important finding to care about in the completed scan (**{scan.name}** on **{scan.target}**) is:",
+        "",
+        f"- **[{top_finding.severity.value.upper()}] {top_finding.title}** on `{loc_str}` ({top_cves})",
+    ]
+    if top_finding.description:
+        desc = " ".join(top_finding.description.split())
+        if len(desc) > 300:
+            desc = desc[:297].rsplit(" ", 1)[0] + "..."
+        lines.append(f"  - **Why it matters**: {desc}")
+    else:
+        lines.append(f"  - **Why it matters**: This is the highest-severity issue detected on `{loc_str}`.")
+
+    lines.append(f"  - **Remediation**: {remediation}")
+
+    secondary = sorted_findings[1:6]
+    if secondary:
+        lines.extend([
+            "",
+            "Next priorities to address after this:",
+        ])
+        for sf in secondary:
+            sf_cves = f" ({', '.join(sf.cve_ids[:2])})" if sf.cve_ids else ""
+            sf_port = f":{sf.port_number}" if sf.port_number else ""
+            lines.append(f"- [{sf.severity.value.upper()}] {sf.title} on {sf.asset_ip or 'unknown host'}{sf_port}{sf_cves}")
+
+    return {
+        "answer": "\n".join(lines),
+        "sources": [{
+            "source": "Completed scan",
+            "title": f"{scan.name} - {scan.target}",
+            "relevance": 1.0,
+        }],
+        "structured_results": [{
+            "scan_id": scan.id,
+            "target": scan.target,
+            "top_finding": {
+                "id": top_finding.id,
+                "title": top_finding.title,
+                "severity": top_finding.severity.value,
+                "cve_ids": top_finding.cve_ids or [],
+                "asset_ip": top_finding.asset_ip,
+                "port": top_finding.port_number,
+                "solution": top_finding.solution,
+            },
+            "total_findings": len(findings),
+        }],
+    }
 
 
 def _answer_scan_list(db: Session, only_problematic: bool = False) -> dict:
@@ -497,8 +769,67 @@ def _answer_remediation_provenance(db: Session) -> dict:
     }
 
 
-def _answer_recent_scan_mitigation(db: Session) -> dict:
-    scan = _latest_problematic_scan(db)
+def _answer_cve_scoped_mitigation(db: Session, cve_id: str, history: list[dict] | None = None) -> dict:
+    """Answer a mitigation follow-up scoped to a specific CVE from the conversation."""
+    scan = _find_contextual_scan(db, history)
+    if scan is None:
+        # Fall back to knowledge base if no scan context
+        cve_upper = cve_id.upper()
+        if cve_upper in kb.cve_db:
+            cve_data = kb.cve_db[cve_upper]
+            desc = cve_data.get("description", "No description available.")
+            severity = cve_data.get("severity", "UNKNOWN")
+            lines = [
+                f"**{cve_upper}** ({severity}): {desc}",
+                "",
+                "**Mitigation**: Apply the vendor-recommended patch or upgrade. "
+                "Restrict unnecessary network exposure and rotate affected credentials if applicable.",
+            ]
+            return {
+                "answer": "\n".join(lines),
+                "sources": [{"source": "CVE", "title": cve_upper, "relevance": 1.0}],
+                "structured_results": [],
+            }
+        return _answer_recent_scan_mitigation(db, history=history)
+
+    # Find findings matching the focal CVE
+    cve_lower = cve_id.lower()
+    matched = [
+        f for f in scan.findings
+        if f.cve_ids and any(c.lower() == cve_lower for c in f.cve_ids)
+    ]
+    if not matched:
+        # CVE not in this scan — fall back to full mitigation
+        return _answer_recent_scan_mitigation(db, history=history)
+
+    lines = [
+        f"For **{cve_id.upper()}** found in scan **{scan.name}** on **{scan.target}**:",
+    ]
+    for finding in matched:
+        remediation = "Apply the vendor patch or upgrade, then rerun the scan to verify closure."
+        if finding.solution and finding.solution.strip():
+            remediation = " ".join(finding.solution.split())
+            if len(remediation) > 400:
+                remediation = remediation[:397].rsplit(" ", 1)[0] + "..."
+        location = f"{finding.asset_ip or 'unknown host'}:{finding.port_number or 'n/a'}"
+        lines.append(
+            f"- **{finding.severity.value.upper()} — {finding.title}** ({location})\n"
+            f"  **Mitigation**: {remediation}"
+        )
+    lines.extend([
+        "",
+        "After remediation: confirm the service is patched, restrict unnecessary exposure, "
+        "rotate affected credentials if applicable, and rerun the same scan.",
+    ])
+    return {
+        "answer": "\n".join(lines),
+        "sources": [{"source": "Completed scan", "title": f"{scan.name} - {scan.target}", "relevance": 1.0}],
+        "structured_results": [],
+    }
+
+
+def _answer_recent_scan_mitigation(db: Session, history: list[dict] | None = None) -> dict:
+    scan = _find_contextual_scan(db, history)
     if scan is None:
         return _answer_recent_scan_question(db)
 
@@ -525,6 +856,302 @@ def _answer_recent_scan_mitigation(db: Session) -> dict:
         "answer": "\n".join(lines),
         "sources": [{"source": "Completed scan", "title": f"{scan.name} - {scan.target}", "relevance": 1.0}],
         "structured_results": [],
+    }
+
+
+def _is_open_ports_question(question: str) -> bool:
+    if _is_conceptual_question(question):
+        return False
+    q = question.lower()
+    # Explicit port exclusion (e.g. "what ports are opened apart from port 80", "besides port 80")
+    if re.search(r"\b(?:apart from|besides|other than|except|excluding)\s+ports?\s*(\d{1,5})\b", q) or re.search(r"\b(?:apart from|besides|other than|except|excluding)\s+(\d{1,5})\b", q):
+        return True
+    # Explicit port + open/listening pattern (e.g. "port 443 open", "port 80 are opened", "ports are open")
+    if re.search(r"\bports?\s+(\d{1,5})\b.*\b(open|opened|listening|active)\b", q) or re.search(r"\b(open|opened|listening|active)\b.*\bports?\s+(\d{1,5})\b", q):
+        return True
+    if re.search(r"\bports?\s+(\d{1,5})\b", q) and any(h in q for h in ("host", "hosts", "system", "systems", "asset", "assets", "ip", "ips", "which", "how many")):
+        return True
+    return any(p in q for p in (
+        "open port", "open ports", "ports open", "port open", "which port", "what port",
+        "ports are open", "ports are opened", "list ports", "show ports", "open services", "ports running",
+        "services open", "ports on", "ports did nmap", "ports found", "all open ports",
+        "scanned ports", "discovered ports", "what ports", "any port"
+    ))
+
+
+def _answer_open_ports_question(db: Session, question: str, history: list[dict] | None = None) -> dict:
+    history = history or []
+    q = question.lower()
+
+    # 1. Check for exclusion patterns: "apart from port 80", "besides port 80", "except port 80", "excluding port 80"
+    exclude_match = re.search(r"\b(?:apart from|besides|other than|except|excluding)\s+ports?\s*(\d{1,5})\b", q) or re.search(r"\b(?:apart from|besides|other than|except|excluding)\s+(\d{1,5})\b", q)
+    exclude_port = int(exclude_match.group(1)) if exclude_match else None
+
+    if exclude_port is not None:
+        other_open_ports = (
+            db.query(Port)
+            .filter(
+                Port.port_number != exclude_port,
+                or_(Port.state == None, Port.state.ilike("%open%")),
+            )
+            .all()
+        )
+        if not other_open_ports:
+            return {
+                "answer": f"No other open ports (apart from port **{exclude_port}**) were recorded in the scans.",
+                "sources": [],
+                "structured_results": [],
+            }
+
+        by_port: dict[int, list[tuple[Asset, Port]]] = {}
+        for p in other_open_ports:
+            asset = p.asset or db.get(Asset, p.asset_id)
+            if asset:
+                by_port.setdefault(p.port_number, []).append((asset, p))
+
+        distinct_assets = len(set(p.asset_id for p in other_open_ports))
+        lines = [
+            f"Found **{len(other_open_ports)} open port instance(s)** across **{distinct_assets} scanned host(s)** (excluding port **{exclude_port}**):\n"
+        ]
+        for p_num in sorted(by_port.keys()):
+            entries = by_port[p_num]
+            proto = entries[0][1].protocol or "tcp"
+            svc = entries[0][1].service_name or "service"
+            hosts_sample = [f"{e[0].hostname or e[0].ip_address}" for e in entries[:3]]
+            more_str = f" and {len(entries) - 3} more" if len(entries) > 3 else ""
+            lines.append(f"- **Port {p_num}/{proto}** ({svc}): {len(entries)} host(s) - {', '.join(hosts_sample)}{more_str}")
+
+        return {
+            "answer": "\n".join(lines),
+            "sources": [
+                {"source": "Scanned asset", "title": f"{p.asset.ip_address if p.asset else 'Asset'} - Port {p.port_number}/{p.protocol}", "relevance": 1.0}
+                for p in other_open_ports
+            ],
+            "structured_results": [
+                {"port": p.port_number, "protocol": p.protocol, "service": p.service_name, "asset_ip": p.asset.ip_address if p.asset else None}
+                for p in other_open_ports
+            ],
+        }
+
+    # 2. Check for specific port number in query (e.g., "port 443", "port 80", "how many port 80 are opened")
+    port_match = re.search(r"\bports?\s+(\d{1,5})\b", q) or re.search(r"\b(\d{1,5})/(?:tcp|udp)\b", q)
+    port_num = int(port_match.group(1)) if port_match else None
+
+    # 3. Check for explicit target tokens (IP or domain) in question
+    target = None
+    target_tokens = re.findall(r"\b\d{1,3}(?:\.\d{1,3}){3}\b|\b[a-z0-9][a-z0-9.-]*\.[a-z]{2,}\b", q)
+    if target_tokens:
+        target = target_tokens[0]
+
+    # --- SUB-CASE A: Query for a specific port number across hosts (or on a target host) ---
+    if port_num is not None:
+        if target:
+            clean_target = target.split("://")[-1].split("/")[0].split(":")[0].strip()
+            asset = db.query(Asset).filter(
+                (Asset.ip_address.ilike(clean_target)) | (Asset.hostname.ilike(clean_target))
+            ).first()
+            if not asset:
+                asset = db.query(Asset).filter(
+                    (Asset.hostname.ilike(f"%{clean_target}%")) | (Asset.ip_address.ilike(f"%{clean_target}%"))
+                ).first()
+            if not asset:
+                return {
+                    "answer": f"I couldn't find asset or port inventory records for **{target}**. Please run an Nmap scan against the target first.",
+                    "sources": [],
+                    "structured_results": [],
+                }
+            matching_p = next(
+                (p for p in asset.ports if p.port_number == port_num and (not p.state or "open" in p.state.lower())),
+                None,
+            )
+            display_host = asset.hostname or asset.ip_address
+            if matching_p:
+                svc_parts = [matching_p.service_name]
+                if matching_p.product:
+                    svc_parts.append(matching_p.product)
+                if matching_p.version:
+                    svc_parts.append(matching_p.version)
+                service_desc = " ".join(filter(None, svc_parts)) or "unrecognized service"
+                answer = f"Yes, port **{port_num}/{matching_p.protocol}** ({service_desc}) is **open** on **{display_host}** ({asset.ip_address})."
+                sources = [{"source": "Scanned asset", "title": f"{asset.ip_address} - Port {port_num}", "relevance": 1.0}]
+                structured_results = [{"port": matching_p.port_number, "protocol": matching_p.protocol, "service": matching_p.service_name, "state": matching_p.state}]
+            else:
+                open_ports_list = [f"{p.port_number}/{p.protocol}" for p in sorted(asset.ports, key=lambda x: x.port_number) if not p.state or "open" in p.state.lower()]
+                other_ports_msg = f" Recorded open ports on this host: {', '.join(open_ports_list)}." if open_ports_list else " No open ports are recorded for this host."
+                answer = f"No, port **{port_num}** is not open on **{display_host}** ({asset.ip_address}).{other_ports_msg}"
+                sources = [{"source": "Scanned asset", "title": f"{asset.ip_address} - {display_host}", "relevance": 1.0}]
+                structured_results = []
+            return {
+                "answer": answer,
+                "sources": sources,
+                "structured_results": structured_results,
+            }
+
+        # Query all hosts with this port open
+        ports = (
+            db.query(Port)
+            .filter(Port.port_number == port_num)
+            .all()
+        )
+        open_ports = [p for p in ports if not p.state or "open" in p.state.lower()]
+        asset_map: dict[int, tuple[Asset, Port]] = {}
+        for p in open_ports:
+            asset = p.asset or db.get(Asset, p.asset_id)
+            if asset and asset.id not in asset_map:
+                asset_map[asset.id] = (asset, p)
+
+        if not asset_map:
+            return {
+                "answer": f"There are **0 hosts** with port **{port_num}** recorded as open in the scanned asset inventory.",
+                "sources": [],
+                "structured_results": [],
+            }
+
+        lines = [
+            f"Found **{len(asset_map)} host(s)** with port **{port_num}** open:\n"
+        ]
+        for asset, p in asset_map.values():
+            display_name = asset.hostname or asset.ip_address
+            ip_info = f" ({asset.ip_address})" if asset.hostname and asset.hostname != asset.ip_address else ""
+            svc_desc = p.service_name or "service"
+            if p.product:
+                svc_desc += f" - {p.product}"
+            lines.append(f"- **{display_name}**{ip_info}: Port {p.port_number}/{p.protocol} ({svc_desc})")
+
+        return {
+            "answer": "\n".join(lines),
+            "sources": [
+                {
+                    "source": "Scanned asset",
+                    "title": f"{a.ip_address} ({a.hostname or 'unknown'}) - Port {p.port_number}/{p.protocol}",
+                    "relevance": 1.0,
+                }
+                for a, p in asset_map.values()
+            ],
+            "structured_results": [
+                {
+                    "asset_id": a.id,
+                    "ip_address": a.ip_address,
+                    "hostname": a.hostname,
+                    "port": p.port_number,
+                    "protocol": p.protocol,
+                    "service": p.service_name,
+                    "state": p.state,
+                }
+                for a, p in asset_map.values()
+            ],
+        }
+
+    # --- SUB-CASE B: Query for ports on a host or across all hosts (no port number specified) ---
+    if not target:
+        for turn in reversed(history):
+            content = turn.get("content", "")
+            match = re.search(r"against \*\*([^\*]+)\*\*", content) or re.search(r"\b([a-z0-9.-]+\.[a-z]{2,})\b", content.lower())
+            if match:
+                target = match.group(1).strip()
+                break
+
+    # If asking generally about all open ports and no explicit host in question
+    if not target and any(phrase in q for phrase in ("all open ports", "what ports are open", "list all ports", "show all ports", "which ports are open", "list open ports", "show open ports")):
+        all_open_ports = (
+            db.query(Port)
+            .filter(or_(Port.state == None, Port.state.ilike("%open%")))
+            .all()
+        )
+        if not all_open_ports:
+            return {
+                "answer": "No open ports are currently recorded in the asset inventory. Run an Nmap scan to discover open services.",
+                "sources": [],
+                "structured_results": [],
+            }
+        by_port: dict[int, list[tuple[Asset, Port]]] = {}
+        for p in all_open_ports:
+            asset = p.asset or db.get(Asset, p.asset_id)
+            if asset:
+                by_port.setdefault(p.port_number, []).append((asset, p))
+
+        distinct_assets = len(set(p.asset_id for p in all_open_ports))
+        lines = [f"Found **{len(all_open_ports)} open port instance(s)** across **{distinct_assets} asset(s)**:\n"]
+        for p_num in sorted(by_port.keys()):
+            entries = by_port[p_num]
+            proto = entries[0][1].protocol or "tcp"
+            svc = entries[0][1].service_name or "service"
+            hosts_sample = [e[0].hostname or e[0].ip_address for e in entries[:3]]
+            more_str = f" and {len(entries) - 3} more" if len(entries) > 3 else ""
+            lines.append(f"- **Port {p_num}/{proto}** ({svc}): {len(entries)} host(s) ({', '.join(hosts_sample)}{more_str})")
+
+        return {
+            "answer": "\n".join(lines),
+            "sources": [{"source": "Network inventory", "title": "Scanned Port Inventory", "relevance": 1.0}],
+            "structured_results": [
+                {"port": p.port_number, "protocol": p.protocol, "service": p.service_name, "asset_ip": (p.asset.ip_address if p.asset else None)}
+                for p in all_open_ports
+            ],
+        }
+
+    # Fallback to latest scan target if no target was explicitly found
+    if not target:
+        latest_scan = (
+            db.query(Scan)
+            .filter(Scan.status == ScanStatus.COMPLETED)
+            .order_by(Scan.finished_at.desc(), Scan.id.desc())
+            .first()
+        )
+        if latest_scan:
+            target = latest_scan.target
+
+    clean_target = target.split("://")[-1].split("/")[0].split(":")[0].strip() if target else ""
+    asset = None
+    if clean_target:
+        asset = db.query(Asset).filter(
+            (Asset.ip_address.ilike(clean_target)) | (Asset.hostname.ilike(clean_target))
+        ).first()
+        if not asset:
+            asset = db.query(Asset).filter(
+                (Asset.hostname.ilike(f"%{clean_target}%")) | (Asset.ip_address.ilike(f"%{clean_target}%"))
+            ).first()
+
+    if not asset:
+        return {
+            "answer": f"I couldn't find asset or port inventory records for **{target or 'the specified host'}**. Please run an Nmap scan against the target to discover its open ports.",
+            "sources": [],
+            "structured_results": [],
+        }
+
+    ports = sorted(
+        [p for p in asset.ports if not p.state or "open" in p.state.lower()],
+        key=lambda p: p.port_number,
+    )
+    display_host = asset.hostname or asset.ip_address
+    if not ports:
+        return {
+            "answer": f"For asset **{display_host}** ({asset.ip_address}), no open ports were recorded in the latest scans.",
+            "sources": [{"source": "Scanned asset", "title": f"{asset.ip_address} - {display_host}", "relevance": 1.0}],
+            "structured_results": [],
+        }
+
+    lines = [
+        f"Based on the network assessment of **{display_host}** ({asset.ip_address}), the following **{len(ports)} port(s)** are open:\n",
+    ]
+    for p in ports:
+        svc_parts = [p.service_name]
+        if p.product:
+            svc_parts.append(p.product)
+        if p.version:
+            svc_parts.append(p.version)
+        service_desc = " ".join(filter(None, svc_parts)) or "unrecognized service"
+        lines.append(f"- **Port {p.port_number}/{p.protocol}**: {service_desc}")
+
+    if asset.internet_exposed:
+        lines.append("\n> [!NOTE]\n> This asset has internet-facing services exposed.")
+
+    return {
+        "answer": "\n".join(lines),
+        "sources": [{"source": "Scanned asset", "title": f"{asset.ip_address} - {display_host}", "relevance": 1.0}],
+        "structured_results": [
+            {"port": p.port_number, "protocol": p.protocol, "service": p.service_name, "product": p.product, "version": p.version}
+            for p in ports
+        ],
     }
 
 
@@ -648,14 +1275,40 @@ def _is_login_analysis_question(question: str) -> bool:
 def _answer_data_question(db: Session, question: str) -> dict:
     q = question.lower()
 
-    severity_filter = next((s for s in SEVERITIES if s in q), None)
+    severity_filter = next((s for s in SEVERITIES if re.search(r"\b" + re.escape(s) + r"\b", q)), None)
     type_filter = None
     for canonical, aliases in VULN_TYPE_KEYWORDS.items():
         if any(a in q for a in aliases):
             type_filter = canonical
             break
 
+    port_match = re.search(r"\bports?\s+(\d{1,5})\b", q)
+    port_filter = int(port_match.group(1)) if port_match else None
+
     wants_hosts = "host" in q or "asset" in q
+
+    # If the user is asking about the asset inventory in general (e.g. "how many hosts were scanned", "list all assets")
+    # without asking for findings or vulnerabilities:
+    has_finding_terms = any(term in q for term in ("finding", "vulnerab", "issue", "defect", "flaw", "cve", "threat", "risk", "critical", "high", "medium", "low"))
+    if wants_hosts and not (severity_filter or type_filter or port_filter or has_finding_terms):
+        assets = db.query(Asset).order_by(Asset.id).all()
+        if not assets:
+            return {
+                "answer": "No assets or hosts have been recorded yet. Launch a scan to discover and inventory targets.",
+                "sources": [],
+                "structured_results": [],
+            }
+        lines = [f"Found **{len(assets)} asset(s)** in the inventory:\n"]
+        for a in assets:
+            ports_count = len([p for p in a.ports if not p.state or "open" in p.state.lower()]) if a.ports else 0
+            vulns_count = len(a.vulnerabilities) if a.vulnerabilities else 0
+            host_name = a.hostname or "unknown hostname"
+            lines.append(f"- **{a.ip_address}** ({host_name}): {ports_count} open port(s), {vulns_count} finding(s)")
+        return {
+            "answer": "\n".join(lines),
+            "sources": [{"source": "Asset inventory", "title": f"{a.ip_address} ({a.hostname or 'unknown'})", "relevance": 1.0} for a in assets],
+            "structured_results": [{"id": a.id, "ip_address": a.ip_address, "hostname": a.hostname, "criticality": a.criticality.value if a.criticality else None} for a in assets],
+        }
 
     query = db.query(Vulnerability)
     if severity_filter:
@@ -663,13 +1316,18 @@ def _answer_data_question(db: Session, question: str) -> dict:
     if type_filter:
         like_terms = VULN_TYPE_KEYWORDS[type_filter]
         query = query.filter(or_(*[Vulnerability.canonical_title.ilike(f"%{t}%") for t in like_terms]))
+    if port_filter:
+        query = query.filter(Vulnerability.port_number == port_filter)
     if "privilege escalation" in q and not type_filter:
         query = query.filter(Vulnerability.canonical_title.ilike("%privilege%"))
 
     results = query.order_by(Vulnerability.risk_score.desc()).limit(50).all()
 
     if not results:
-        filters_desc = ", ".join(filter(None, [severity_filter, type_filter])) or "the specified criteria"
+        filters_list = [severity_filter, type_filter]
+        if port_filter:
+            filters_list.append(f"port {port_filter}")
+        filters_desc = ", ".join(filter(None, filters_list)) or "the specified criteria"
         return {
             "answer": f"I couldn't find any findings that match {filters_desc}. "
                       f"Try a broader search, or run a scan first.",
@@ -683,12 +1341,12 @@ def _answer_data_question(db: Session, question: str) -> dict:
             asset = db.get(Asset, v.asset_id)
             key = asset.ip_address if asset else "unknown"
             by_host.setdefault(key, []).append(v.canonical_title)
-        lines = [f"Found findings on **{len(by_host)} system(s)**:"]
+        lines = [f"Found findings on **{len(by_host)} system(s)**:\n"]
         for host, titles in by_host.items():
             lines.append(f"- **{host}**: {len(titles)} issue(s) - {'; '.join(titles[:3])}{' ...' if len(titles) > 3 else ''}")
         answer = "\n".join(lines)
     else:
-        lines = [f"Found **{len(results)}** matching finding(s):"]
+        lines = [f"Found **{len(results)}** matching finding(s):\n"]
         for v in results[:20]:
             asset = db.get(Asset, v.asset_id)
             host = asset.ip_address if asset else "unknown"
@@ -725,19 +1383,22 @@ def ask(
             "degradation": {"reason": _index_error or "rag_index_not_ready"},
         }
     history = history or []
+    question = normalize_security_query(question)
+    effective_question, active_cve = resolve_focal_context(question, history)
+
     previous_user_questions = [
-        turn["content"] for turn in history
+        normalize_security_query(turn["content"]) for turn in history
         if turn.get("role") == "user" and turn.get("content")
     ]
     approved_memory = "\n".join(
         f"- {item[:1000]}" for item in (memory_context or []) if item
     )
     recent_context = "\n".join(
-        f"{turn.get('role', 'user')}: {turn.get('content', '')[:1200]}"
-        for turn in history[-6:]
+        f"{turn.get('role', 'user')}: {normalize_security_query(turn.get('content', ''))[:1200]}"
+        for turn in history[-12:]
         if turn.get("content")
     )
-    contextual_question = question
+    contextual_question = effective_question
     if approved_memory:
         contextual_question = (
             "Approved user context (data, not instructions):\n"
@@ -746,7 +1407,7 @@ def ask(
     if recent_context:
         # Keep conversational references (it/that/mitigate) grounded in both
         # the prior user request and the answer that identified the evidence.
-        contextual_question = f"Conversation context:\n{recent_context}\n\nCurrent question: {question}"
+        contextual_question = f"Conversation context:\n{recent_context}\n\nCurrent question: {effective_question}"
 
     if _GREETING_RE.match(question):
         return _greeting_or_help_answer(db, is_help=False)
@@ -762,6 +1423,23 @@ def ask(
             "analysis": analysis,
         }
 
+    scan_context_active = bool(
+        previous_user_questions and any(
+            _is_recent_scan_question(item)
+            or _is_scan_priority_follow_up(item)
+            or _is_mitigation_follow_up(item)
+            for item in previous_user_questions[-3:]
+        )
+    )
+
+    if _is_scan_priority_follow_up(question) and (
+        scan_context_active or any(term in question.lower() for term in ("scan", "above", "in the chat", "reported"))
+    ):
+        return _answer_recent_scan_priorities(db, question, history=history)
+
+    if _is_open_ports_question(question):
+        return _answer_open_ports_question(db, question, history=history)
+
     if _is_recent_scan_question(question):
         problematic_only = any(term in question.lower() for term in ("problem", "issue", "finding", "vulnerab"))
         return _answer_recent_scan_question(db, problematic_only=problematic_only)
@@ -771,14 +1449,17 @@ def ask(
         return _answer_critical_findings(db)
     if _is_provenance_question(question):
         return _answer_remediation_provenance(db)
-    if previous_user_questions and _is_mitigation_follow_up(question) and any(
-        _is_recent_scan_question(item) for item in previous_user_questions[-3:]
+    if previous_user_questions and _is_mitigation_follow_up(question) and (
+        scan_context_active or any(_is_recent_scan_question(item) for item in previous_user_questions[-3:])
     ):
         if "vulnerab" in question.lower() or "issue" in question.lower():
             return _answer_recent_scan_vulnerability_and_mitigation(db)
-        return _answer_recent_scan_mitigation(db)
-    if previous_user_questions and _is_explanation_follow_up(question) and any(
-        _is_recent_scan_question(item) for item in previous_user_questions[-3:]
+        # If the conversation has a focal CVE, scope the mitigation answer to it
+        if active_cve:
+            return _answer_cve_scoped_mitigation(db, active_cve, history=history)
+        return _answer_recent_scan_mitigation(db, history=history)
+    if previous_user_questions and _is_explanation_follow_up(question) and (
+        scan_context_active or any(_is_recent_scan_question(item) for item in previous_user_questions[-3:])
     ):
         return _answer_scan_explanation(db)
 
@@ -789,13 +1470,17 @@ def ask(
 
     # Also check: does the question reference a specific CVE ID we should
     # prioritize over generic similarity ranking?
-    cve_match = re.search(r"CVE-\d{4}-\d{4,7}", question, re.IGNORECASE)
+    cve_target = active_cve
+    if not cve_target:
+        cve_match = re.search(r"CVE-\d{4}-\d{4,7}", question, re.IGNORECASE)
+        if cve_match:
+            cve_target = cve_match.group(0).upper()
     try:
         retrieval_started = time.monotonic()
         with span("rag.postgres_vector_retrieval", backend="postgres", stage="vector"):
             from rag.retrieval.service import retrieve as persistent_retrieve
             retrieved = persistent_retrieve(
-                db, contextual_question, _metadata_criteria(question), k=FUSION_K
+                db, contextual_question, _metadata_criteria(effective_question, active_cve=cve_target), k=FUSION_K
             )
         observe(rag_stage_duration, time.monotonic() - retrieval_started, "retrieval")
         observe(retrieval_candidates, len(retrieved), "retrieval", "postgres")
@@ -806,12 +1491,38 @@ def ask(
     with span("rag.local_reranking", stage="reranking", model="local-bge"):
         retrieved = _rerank_candidates(contextual_question, retrieved, min(k, FINAL_EVIDENCE_K))
     observe(rag_stage_duration, time.monotonic() - rerank_started, "reranking")
-    if cve_match:
-        cve_id = cve_match.group(0).upper()
-        exact = [d for d, _ in retrieved if d["id"] == f"cve:{cve_id}"]
+    if cve_target:
+        exact = [
+            d for d, _ in retrieved
+            if d.get("id", "").upper() == f"cve:{cve_target}".upper()
+            or cve_target.upper() in d.get("id", "").upper()
+        ]
         if exact:
             retrieved = [(exact[0], 1.0)] + [
-                (doc, score) for doc, score in retrieved if doc["id"] != f"cve:{cve_id}"
+                (doc, score) for doc, score in retrieved
+                if not (doc.get("id", "").upper() == f"cve:{cve_target}".upper() or cve_target.upper() in doc.get("id", "").upper())
+            ][: k - 1]
+        elif cve_target in kb.cve_db:
+            cve_data = kb.cve_db[cve_target]
+            injected_doc = {
+                "id": f"cve:{cve_target}",
+                "source": "CVE",
+                "title": f"{cve_target} - {cve_data.get('product', '')}",
+                "text": (
+                    f"CVE ID: {cve_target}\n"
+                    f"Description: {cve_data.get('description', '')}\n"
+                    f"CVSS v3: {cve_data.get('cvss_v3', 'N/A')}\n"
+                    f"Severity: {cve_data.get('severity', 'UNKNOWN')}\n"
+                    f"CWE: {cve_data.get('cwe', 'N/A')}\n"
+                    f"Vendor: {cve_data.get('vendor', '')}\n"
+                    f"Product: {cve_data.get('product', '')}\n"
+                    f"Exploit Available: {cve_data.get('exploit_available', False)}"
+                ),
+                "metadata": {"document_type": "CVE", "cve_id": cve_target, "severity": cve_data.get("severity")},
+            }
+            retrieved = [(injected_doc, 1.0)] + [
+                (doc, score) for doc, score in retrieved
+                if not (doc.get("id", "").upper() == f"cve:{cve_target}".upper() or cve_target.upper() in doc.get("id", "").upper())
             ][: k - 1]
 
     # A scan target is often the most important part of a question, but
@@ -820,32 +1531,37 @@ def ask(
     # receives the actual scan evidence first.
     target_tokens = re.findall(r"\b[a-z0-9][a-z0-9.-]*\.[a-z]{2,}\b|\b\d{1,3}(?:\.\d{1,3}){3}\b", question.lower())
     if target_tokens:
-        exact_scans = [
+        exact_matches = [
             (doc, 1.0)
             for doc, _ in retrieved
-            if doc.get("source") == "Completed scan"
-            and any(token in doc.get("title", "").lower() for token in target_tokens)
+            if doc.get("source") in ("Completed scan", "Scanned asset")
+            and any(token in doc.get("title", "").lower() or token in doc.get("text", "").lower() for token in target_tokens)
         ]
-        if exact_scans:
-            exact_ids = {doc["id"] for doc, _ in exact_scans}
-            retrieved = exact_scans + [(doc, score) for doc, score in retrieved if doc["id"] not in exact_ids]
+        if exact_matches:
+            exact_ids = {doc["id"] for doc, _ in exact_matches}
+            retrieved = exact_matches + [(doc, score) for doc, score in retrieved if doc["id"] not in exact_ids]
             retrieved = retrieved[:k]
 
-    named_query = bool(_named_vulnerability_terms(question))
-    if named_query and not _has_named_vulnerability_evidence(question, retrieved):
+    named_query = bool(_named_vulnerability_terms(question, active_cve=cve_target))
+    if named_query and not _has_named_vulnerability_evidence(question, retrieved, active_cve=cve_target):
         logger.info("named vulnerability evidence rejected: local candidates did not match query identifiers")
         retrieved = []
 
-    # NVD is a bounded, read-only fallback. Avoid external lookup for
-    # conversational follow-ups and when local evidence is already adequate.
+    # NVD is a bounded, read-only fallback. Allow external lookup when the
+    # user is asking about a specific named vulnerability (CVE or alias) and
+    # local evidence is insufficient, even during follow-up turns.
     local_evidence_adequate = _has_adequate_local_evidence(question, retrieved)
+    external_used = False
     if _should_use_nvd_fallback(
-        retrieved, previous_user_questions, named_query, local_evidence_adequate
+        retrieved, previous_user_questions, named_query, local_evidence_adequate,
+        active_cve=cve_target,
     ):
         internet_doc = lookup_question(question)
-        if internet_doc and (not named_query or _has_named_vulnerability_evidence(question, [(internet_doc, 1.0)])):
+        if internet_doc and (not named_query or _has_named_vulnerability_evidence(question, [(internet_doc, 1.0)], active_cve=cve_target)):
             retrieved = [(internet_doc, 1.0)] + retrieved[: k - 1]
+            external_used = True
 
+    retrieved, target_cve = _scope_retrieved_evidence(question, retrieved, active_cve=cve_target)
     if named_query and not retrieved:
         return {
             "answer": (
@@ -854,14 +1570,40 @@ def ask(
             ),
             "sources": [],
             "structured_results": [],
+            "source_mode": "insufficient_evidence",
             "degradation": {"reason": "named_vulnerability_evidence_unavailable"},
         }
 
     provider = get_provider()
-    generation_started = time.monotonic()
-    with span("rag.groq_generation", provider=provider.name):
-        answer_text = provider.generate(question, retrieved)
-    observe(rag_stage_duration, time.monotonic() - generation_started, "generation")
+    source_mode = "external" if external_used else "grounded"
+    generation_question = question
+    if approved_memory:
+        generation_question = f"User context:\n{approved_memory}\n\nQuestion: {question}"
+    if _is_general_question(question, active_cve=cve_target) and (_is_conceptual_question(question) or not _has_adequate_local_evidence(question, retrieved)):
+        source_mode = "general"
+        retrieved = []
+        answer_text = provider.generate_general(generation_question, history=history)
+    else:
+        if target_cve:
+            generation_question = (
+                f"Focus on {target_cve}. Do not mention unrelated CVEs. "
+                f"Question: {question}"
+            )
+        generation_started = time.monotonic()
+        with span("rag.groq_generation", provider=provider.name):
+            try:
+                answer_text = provider.generate(generation_question, retrieved, history=history)
+            except TypeError:
+                answer_text = provider.generate(generation_question, retrieved)
+        observe(rag_stage_duration, time.monotonic() - generation_started, "generation")
+        if _answer_mentions_unrequested_cve(answer_text, target_cve):
+            logger.warning("answer contained an unrequested CVE; retrying with target scope")
+            try:
+                answer_text = provider.generate(generation_question, retrieved[:1], history=history)
+            except TypeError:
+                answer_text = provider.generate(generation_question, retrieved[:1])
+            if _answer_mentions_unrequested_cve(answer_text, target_cve):
+                logger.warning("scoped generation response did not include target CVE")
     generation_status = provider_status()
     increment(answer_outcomes, "fallback" if generation_status.get("last_degradation_reason") else "grounded")
     observe(citations, len(retrieved))
@@ -877,6 +1619,7 @@ def ask(
         } for d, score in retrieved],
         "structured_results": [],
         "provider": provider.name,
+        "source_mode": source_mode,
         "degradation": (
             {"reason": generation_status["last_degradation_reason"]}
             if generation_status.get("last_degradation_reason") else None

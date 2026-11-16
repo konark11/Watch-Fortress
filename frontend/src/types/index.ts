@@ -64,6 +64,15 @@ export interface Scan {
   error_message: string | null;
 }
 
+export interface WorkerReadiness {
+  ready: boolean;
+  mode: "embedded" | "standalone";
+  reason: string;
+  last_seen_at: string | null;
+  age_seconds: number | null;
+  stale_threshold_seconds: number;
+}
+
 export interface DashboardStats {
   total_assets: number;
   total_vulnerabilities: number;

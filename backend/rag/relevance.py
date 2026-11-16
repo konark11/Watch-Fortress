@@ -2,6 +2,18 @@
 from __future__ import annotations
 
 import re
+import unicodedata
+
+_DASH_PATTERN = re.compile(r"[\u2010\u2011\u2012\u2013\u2014\u2212\ufe63\uff0d\u00ad]")
+
+
+def normalize_security_query(text: str) -> str:
+    """Normalize unicode compatibility characters and typographic dashes to ASCII hyphens."""
+    if not text:
+        return ""
+    normalized = unicodedata.normalize("NFKC", str(text))
+    normalized = _DASH_PATTERN.sub("-", normalized)
+    return normalized.strip()
 
 
 SECURITY_TERMS = {
@@ -14,7 +26,8 @@ NOISE_TERMS = {"table of contents", "copyright", "all rights reserved", "referen
 
 
 def clean_text(text: str) -> str:
-    lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
+    normalized_input = normalize_security_query(text)
+    lines = [re.sub(r"\s+", " ", line).strip() for line in normalized_input.splitlines()]
     seen: set[str] = set()
     cleaned: list[str] = []
     for line in lines:

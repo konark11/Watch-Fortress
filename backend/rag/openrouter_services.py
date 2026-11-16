@@ -38,11 +38,12 @@ def embed(texts: list[str]) -> list[list[float]]:
     return embeddings
 
 
-def rerank(query: str, documents: list[str]) -> list[float]:
+def rerank(query: str, documents: list[str], model: str | None = None) -> list[float]:
     if not RERANK_MODEL:
         raise RuntimeError("Set OPENROUTER_RERANK_MODEL to enable API reranking")
+    selected_model = (model or RERANK_MODEL).strip()
     data = _post("/rerank", {
-        "model": RERANK_MODEL,
+        "model": selected_model,
         "query": query,
         "documents": documents,
         "top_n": len(documents),

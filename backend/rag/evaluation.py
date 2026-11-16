@@ -35,6 +35,7 @@ from models.database import SessionLocal
 from rag.embeddings import active_embedding_metadata
 from rag.llm_providers import provider_status
 from rag.query_engine import ask, production_retrieve
+from rag.reranker import status as reranker_status
 from rag.settings import (
     DENSE_TOP_K, SPARSE_TOP_K, FUSION_K, RERANK_K, FINAL_EVIDENCE_K,
     EMBEDDING_MODEL, EMBEDDING_REVISION, RERANKER_MODEL,
@@ -147,6 +148,7 @@ def evaluate(
     dataset = Path(dataset_path)
     rows = load_reviewed_dataset(dataset, split=split)
     started = time.monotonic()
+    reranker_before = reranker_status()
     db = SessionLocal()
     backend = None
     cases = []
@@ -215,6 +217,11 @@ def evaluate(
             citation_precision.append(len(generated & approved) / len(generated))
             citation_recall.append(len(generated & approved) / len(approved) if approved else 0.0)
     active = active_embedding_metadata()
+    reranker_after = reranker_status()
+    reranker_fallbacks = (
+        reranker_after.get("stats", {}).get("fallbacks", 0)
+        - reranker_before.get("stats", {}).get("fallbacks", 0)
+    )
     report = {
         "status": "RUN",
         "run_purpose": purpose,
@@ -239,11 +246,15 @@ def evaluate(
             "retrieval_backend": backend,
             "embedding_model": active.get("model", EMBEDDING_MODEL), "embedding_revision": active.get("revision") or EMBEDDING_REVISION or None,
             "embedding_implementation": active.get("implementation"), "reranker_model": RERANKER_MODEL,
+            "reranker": reranker_after,
             "generation": {"provider": provider_status().get("provider"), "model": provider_status().get("model")} if answer_mode else "NOT RUN",
             "retrieval_parameters": {"vector_candidate_k": DENSE_TOP_K, "lexical_candidate_k": SPARSE_TOP_K, "fusion_k": FUSION_K, "rerank_k": RERANK_K, "final_evidence_k": k, "filter_configuration": "production metadata criteria"},
             "index_run_id": str(active_run["public_id"]), "index_state": active_run["state"],
         },
-        "failures": failures, "fallback_count": sum(1 for c in cases if c["generation"].get("degradation_reason")), "duration_ms": round((time.monotonic() - started) * 1000, 2), "cases": cases,
+        "failures": failures,
+        "fallback_count": sum(1 for c in cases if c["generation"].get("degradation_reason")),
+        "reranker_fallback_count": reranker_fallbacks,
+        "duration_ms": round((time.monotonic() - started) * 1000, 2), "cases": cases,
     }
     if output_path:
         Path(output_path).write_text(json.dumps(report, indent=2), encoding="utf-8")

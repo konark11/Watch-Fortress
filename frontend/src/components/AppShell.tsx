@@ -92,6 +92,7 @@ export default function AppShell() {
   ].find((item) => (item.end ? location.pathname === item.to : location.pathname.startsWith(item.to)));
 
   const pageTitle = activeItem ? activeItem.label : "Console";
+  const isAssistant = location.pathname.startsWith("/assistant");
 
   return (
     <div className="flex h-screen bg-[var(--bg)] text-[var(--text)] overflow-hidden">
@@ -290,11 +291,19 @@ export default function AppShell() {
         </header>
 
         {/* Content Viewport */}
-        <main className="flex-1 overflow-y-auto p-5 md:p-6">
-          <div className="max-w-6xl mx-auto">
-            <Outlet />
-          </div>
-        </main>
+        {isAssistant ? (
+          <main className="flex-1 overflow-hidden p-0 flex flex-col min-h-0">
+            <div className="flex-1 flex flex-col min-h-0 w-full h-full">
+              <Outlet />
+            </div>
+          </main>
+        ) : (
+          <main className="flex-1 overflow-y-auto p-5 md:p-6">
+            <div className="max-w-6xl mx-auto">
+              <Outlet />
+            </div>
+          </main>
+        )}
       </div>
     </div>
   );

@@ -40,14 +40,16 @@ def embed_texts(texts: list[str], batch_size: int = 64) -> list[list[float]]:
     global _sentence_transformer, _last_embedding_metadata
     if _sentence_transformer is None:
         try:
+            local_only = os.environ.get("RAG_ALLOW_MODEL_DOWNLOAD", "").lower() not in {"1", "true", "yes"}
+            if local_only:
+                os.environ.setdefault("HF_HUB_OFFLINE", "1")
+                os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
             from sentence_transformers import SentenceTransformer
             _sentence_transformer = SentenceTransformer(
                 EMBEDDING_MODEL,
                 device=DEVICE,
                 model_kwargs={
-                    "local_files_only": os.environ.get(
-                        "RAG_ALLOW_MODEL_DOWNLOAD", ""
-                    ).lower() not in {"1", "true", "yes"}
+                    "local_files_only": local_only,
                 },
             )
         except (ImportError, OSError, ValueError) as exc:

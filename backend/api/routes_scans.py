@@ -15,6 +15,7 @@ from api.schemas import ScanLaunchRequest
 from scanners.orchestrator import get_progress, scanner_availability
 from core.ingestion import ingest_scan_result
 from jobs.repository import enqueue, request_cancel
+from jobs.readiness import worker_readiness
 
 router = APIRouter()
 
@@ -23,6 +24,7 @@ def _safe_scan_options(options: dict) -> dict:
     allowed = {
         "profile", "severity_profile", "tags", "timeout_seconds",
         "automatic_scan", "poll_interval_seconds", "script_name", "extra_args", "template_uuid",
+        "concurrency", "rate_limit", "resolve_dns", "timeout",
     }
     return {
         key: value for key, value in options.items()
@@ -35,6 +37,11 @@ def _safe_scan_options(options: dict) -> dict:
 @router.get("/scanner-availability")
 def scanner_status(_: User = Depends(get_current_user)):
     return scanner_availability()
+
+
+@router.get("/worker-readiness")
+def scan_worker_readiness(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    return worker_readiness(db)
 
 
 @router.get("")
@@ -79,6 +86,16 @@ def launch_scan(
         scanner_type = ScannerType(payload.scanner_type)
     except ValueError:
         raise HTTPException(400, f"Invalid scanner_type. Must be one of {[s.value for s in ScannerType]}")
+
+    readiness = worker_readiness(db)
+    if not readiness["ready"]:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Scan worker is unavailable. Start a worker and try again.",
+                "readiness": readiness,
+            },
+        )
 
     scan = Scan(
         name=payload.name, scanner_type=scanner_type, target=payload.target,

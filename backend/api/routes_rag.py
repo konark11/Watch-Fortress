@@ -134,6 +134,7 @@ def ask_assistant(payload: AskRequest, db: Session = Depends(get_db), user: User
             generation_metadata={
                 "latency_ms": round((time.monotonic() - started) * 1000, 2),
                 "degradation": result.get("degradation"),
+                "source_mode": result.get("source_mode", "grounded"),
             },
             expires_at=conversation.expires_at,
         )

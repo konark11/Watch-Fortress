@@ -13,6 +13,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.graphics.shapes import Drawing, Rect, String
 
 SEVERITY_COLORS = {
     "critical": colors.HexColor("#d92d3f"), "high": colors.HexColor("#e8792f"),
@@ -78,6 +79,23 @@ def generate_pdf_report(data: dict, output_path: str):
         story.append(Paragraph(summary_text, body))
         story.append(Spacer(1, 10))
 
+        story.append(Paragraph("Severity Distribution", h2_style))
+        story.append(_bar_chart(
+            ["Critical", "High", "Medium", "Low", "Info"],
+            [s["severity_counts"].get(level, 0) for level in ("critical", "high", "medium", "low", "info")],
+            [SEVERITY_COLORS[level] for level in ("critical", "high", "medium", "low", "info")],
+        ))
+        story.append(Spacer(1, 8))
+
+        story.append(Paragraph("Exposure Signals", h2_style))
+        story.append(_bar_chart(
+            ["Known Exploited (CISA KEV)", "Exploit Available"],
+            [s["kev_count"], s["exploitable_count"]],
+            [SEVERITY_COLORS["critical"], SEVERITY_COLORS["high"]],
+            max_value=max(s["total_vulnerabilities"], 1),
+        ))
+        story.append(Spacer(1, 10))
+
         story.append(Paragraph("Top Risk Findings", h2_style))
         rows = [["Finding", "Severity", "Asset", "Risk"]]
         for f in data["top_risk_findings"]:
@@ -133,3 +151,22 @@ def _styled_table(rows, col_widths):
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
     return t
+
+
+def _bar_chart(labels, values, bar_colors, max_value=None):
+    max_value = max_value or max(max(values, default=0), 1)
+    width = 500
+    row_height = 24
+    left = 150
+    chart = Drawing(width, row_height * len(labels) + 8)
+
+    for index, (label, value, bar_color) in enumerate(zip(labels, values, bar_colors)):
+        y = (len(labels) - index - 1) * row_height + 4
+        chart.add(String(left - 8, y + 6, label, fontSize=8, textAnchor="end", fillColor=colors.HexColor("#344054")))
+        chart.add(Rect(left, y, width - left - 35, 12, fillColor=colors.HexColor("#eef2f6"), strokeColor=None))
+        bar_width = (width - left - 35) * value / max_value
+        if value:
+            chart.add(Rect(left, y, max(bar_width, 2), 12, fillColor=bar_color, strokeColor=None))
+        chart.add(String(width - 25, y + 6, str(value), fontSize=8, textAnchor="end", fillColor=colors.HexColor("#344054")))
+
+    return chart

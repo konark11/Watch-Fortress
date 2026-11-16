@@ -29,13 +29,10 @@ SEVERITY_PROFILES = {
 
 
 def _templates_dir() -> Optional[str]:
-    candidates = [
-        os.environ.get("NUCLEI_TEMPLATES_DIR", ""),
-        os.path.expanduser("~/nuclei-templates"),
-    ]
-    for c in candidates:
-        if c and os.path.isdir(c):
-            return c
+    custom = os.environ.get("NUCLEI_TEMPLATES_DIR", "")
+    if custom and os.path.isdir(custom):
+        return custom
+    # Fall back to letting nuclei use its own default/installed template resolution
     return None
 
 
@@ -53,15 +50,23 @@ class NucleiScanner(ScannerBackend):
         severities = SEVERITY_PROFILES.get(severity_profile, SEVERITY_PROFILES["standard"])
         template_tags = options.get("tags", "")  # e.g. "cve,exposure"
         automatic_scan = bool(options.get("automatic_scan", False))
-        normalized_target = target if "://" in target else f"http://{target}"
+        concurrency = str(options.get("concurrency") or os.environ.get("NUCLEI_CONCURRENCY", "50"))
+        rate_limit = str(options.get("rate_limit") or os.environ.get("NUCLEI_RATE_LIMIT", "300"))
+        timeout = str(options.get("timeout") or os.environ.get("NUCLEI_TIMEOUT", "5"))
 
         if on_progress:
-            on_progress(5, f"Starting nuclei against {normalized_target}")
+            on_progress(5, f"Starting nuclei against {target}")
 
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
             out_path = tmp.name
 
-        cmd = ["nuclei", "-u", normalized_target, "-jsonl", "-o", out_path, "-severity", ",".join(severities), "-silent"]
+        cmd = [
+            "nuclei", "-u", target,
+            "-c", concurrency, "-rl", rate_limit, "-timeout", timeout,
+            "-jsonl", "-o", out_path, "-silent",
+        ]
+        if severity_profile != "all":
+            cmd += ["-severity", ",".join(severities)]
         if automatic_scan:
             cmd.append("-as")
         tdir = _templates_dir()
@@ -70,40 +75,63 @@ class NucleiScanner(ScannerBackend):
         if template_tags:
             cmd += ["-tags", template_tags]
 
-        try:
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            cancel_check = options.get("_cancel_check")
-            deadline = time.monotonic() + options.get("timeout_seconds", 900)
+        with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as log_file:
             try:
-                while proc.poll() is None:
-                    if callable(cancel_check) and cancel_check():
-                        proc.terminate()
-                        try:
-                            proc.wait(timeout=5)
-                        except subprocess.TimeoutExpired:
+                proc = subprocess.Popen(cmd, stdout=log_file, stderr=log_file)
+                cancel_check = options.get("_cancel_check")
+                timeout_limit = options.get("timeout_seconds", 1800)
+                start_time = time.monotonic()
+                last_pulse = start_time
+                deadline = start_time + timeout_limit
+                try:
+                    while proc.poll() is None:
+                        now = time.monotonic()
+                        if callable(cancel_check) and cancel_check():
+                            proc.terminate()
+                            try:
+                                proc.wait(timeout=5)
+                            except subprocess.TimeoutExpired:
+                                proc.kill()
+                                proc.wait()
+                            raise ScannerCancelled()
+                        if now >= deadline:
                             proc.kill()
                             proc.wait()
-                        raise ScannerCancelled()
-                    if time.monotonic() >= deadline:
+                            raise subprocess.TimeoutExpired(cmd, timeout_limit)
+                        if on_progress and (now - last_pulse) >= 3:
+                            elapsed = int(now - start_time)
+                            est_pct = min(85, 5 + int((elapsed / timeout_limit) * 80))
+                            current_findings = 0
+                            if os.path.exists(out_path):
+                                try:
+                                    with open(out_path, "r", encoding="utf-8", errors="ignore") as f:
+                                        current_findings = sum(1 for line in f if line.strip())
+                                except Exception:
+                                    pass
+                            msg = f"Nuclei scan in progress against {target} ({elapsed}s elapsed"
+                            if current_findings > 0:
+                                msg += f", {current_findings} finding(s) discovered"
+                            msg += ")"
+                            try:
+                                on_progress(est_pct, msg, current_findings)
+                            except TypeError:
+                                on_progress(est_pct, msg)
+                            last_pulse = now
+                        time.sleep(0.5)
+                finally:
+                    if proc.poll() is None:
                         proc.kill()
                         proc.wait()
-                        raise subprocess.TimeoutExpired(cmd, options.get("timeout_seconds", 900))
-                    time.sleep(0.5)
-                stdout, stderr = proc.communicate()
-                completed = subprocess.CompletedProcess(cmd, proc.returncode, stdout, stderr)
-            finally:
-                if proc.poll() is None:
-                    proc.kill()
-                    proc.wait()
-        except subprocess.TimeoutExpired:
-            raise RuntimeError(f"nuclei scan against {normalized_target} timed out")
+            except subprocess.TimeoutExpired:
+                raise RuntimeError(f"nuclei scan against {target} timed out")
 
-        if completed.returncode != 0:
-            detail = (completed.stderr or completed.stdout).strip()
-            raise RuntimeError(
-                f"nuclei exited with code {completed.returncode}"
-                + (f": {detail[:500]}" if detail else "")
-            )
+            if proc.returncode not in (0, 1):
+                log_file.seek(0)
+                detail = log_file.read().strip()
+                raise RuntimeError(
+                    f"nuclei exited with code {proc.returncode}"
+                    + (f": {detail[:500]}" if detail else "")
+                )
 
         if on_progress:
             on_progress(90, "nuclei scan finished, parsing results")
@@ -117,4 +145,4 @@ class NucleiScanner(ScannerBackend):
         if on_progress:
             on_progress(100, "Complete")
 
-        return {"raw_output": raw_output, "filename": f"nuclei_{normalized_target.replace('/', '_').replace(':', '_')}.jsonl"}
+        return {"raw_output": raw_output, "filename": f"nuclei_{target.replace('/', '_').replace(':', '_')}.jsonl"}

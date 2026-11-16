@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Play, FileUp, Square } from "lucide-react";
 import { api } from "../api/client";
-import type { Scan } from "../types";
+import type { Scan, WorkerReadiness } from "../types";
 import { Card, Button, Input, Select, EmptyState, StatusBadge } from "../components/ui";
 
 const ENGINES = [
@@ -28,21 +28,23 @@ const NUCLEI_SEVERITY_PROFILES = [
 export default function ScansPage() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [availability, setAvailability] = useState<Record<string, boolean>>({});
+  const [workerReadiness, setWorkerReadiness] = useState<WorkerReadiness | null>(null);
   const [selectedEngines, setSelectedEngines] = useState<string[]>(["nmap"]);
   const [target, setTarget] = useState("192.168.1.0/24");
   const [name, setName] = useState("Internal Network Baseline");
   const [nmapProfile, setNmapProfile] = useState("vuln_scripts");
-  const [nucleiSeverity, setNucleiSeverity] = useState("standard");
+  const [nucleiSeverity, setNucleiSeverity] = useState("all");
   const [nucleiTags, setNucleiTags] = useState("");
   const [nucleiAutomaticScan, setNucleiAutomaticScan] = useState(false);
   const [launching, setLaunching] = useState(false);
   const [stopping, setStopping] = useState<Record<number, boolean>>({});
-  const [progress, setProgress] = useState<Record<number, { pct: number; message: string; job_state?: string }>>({});
+  const [progress, setProgress] = useState<Record<number, { pct: number; message: string; job_state?: string; findings_count?: number }>>({});
   const wsRefs = useRef<Record<number, WebSocket>>({});
 
   useEffect(() => {
     load();
     api.get<Record<string, boolean>>("/scans/scanner-availability").then(setAvailability);
+    api.get<WorkerReadiness>("/scans/worker-readiness").then(setWorkerReadiness).catch(() => setWorkerReadiness(null));
     const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -125,9 +127,12 @@ export default function ScansPage() {
       );
       const failed = results.filter((res): res is PromiseRejectedResult => res.status === "rejected");
       if (failed.length > 0) {
-        alert(`${failed.length} scanner(s) failed to launch.`);
+        const messages = failed.map(({ reason }) => reason instanceof Error ? reason.message : String(reason));
+        alert(messages.join("\n"));
       }
-      load();
+      if (failed.length < results.length) {
+        load();
+      }
     } catch (err: any) {
       alert(err.message || "Failed to launch scan");
     } finally {
@@ -160,7 +165,13 @@ export default function ScansPage() {
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[5px] overflow-hidden">
         <div className="px-4 py-2 border-b border-[var(--border)] flex items-center justify-between text-xs">
           <span className="font-medium text-[var(--text)]">Scanner engines</span>
-          <span className="text-[var(--text-tertiary)]">Local and remote assessment workers</span>
+          <span className={workerReadiness?.ready ? "text-emerald-500" : "text-[var(--text-tertiary)]"}>
+            {workerReadiness === null
+              ? "Scan worker: checking"
+              : workerReadiness.ready
+              ? "Scan worker: ready"
+              : "Scan worker: unavailable"}
+          </span>
         </div>
         <div className="divide-y divide-[var(--border)]">
           {ENGINES.map((engine) => {
@@ -270,7 +281,11 @@ export default function ScansPage() {
               <Input
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
-                placeholder="192.168.1.0/24 or hostname"
+                placeholder={
+                  selectedEngines.includes("nuclei") && !selectedEngines.includes("nmap")
+                    ? "https://target.local or http://192.168.1.10:8080"
+                    : "192.168.1.0/24 or hostname"
+                }
                 required
                 className="font-mono-data"
               />
@@ -348,12 +363,12 @@ export default function ScansPage() {
             <div className="pt-2">
               <Button
                 type="submit"
-                disabled={launching || selectedEngines.length === 0}
+                disabled={launching || selectedEngines.length === 0 || workerReadiness?.ready === false}
                 variant="primary"
                 className="w-full"
                 icon={Play}
               >
-                {launching ? "Starting scan..." : "Run scan"}
+                Run scan
               </Button>
             </div>
           </form>
@@ -417,7 +432,13 @@ export default function ScansPage() {
                         {s.target}
                       </td>
                       <td className="py-2 px-3 text-right font-mono-data font-medium text-[var(--text)]">
-                        {s.findings_count}
+                        {live && live.findings_count !== undefined && live.findings_count > 0 ? (
+                          <span className="text-[var(--accent)] font-semibold">
+                            {live.findings_count}
+                          </span>
+                        ) : (
+                          s.findings_count
+                        )}
                       </td>
                       <td className="py-2 px-3 text-right">
                         {(s.status === "pending" || s.status === "running") && live ? (
@@ -431,8 +452,15 @@ export default function ScansPage() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-[var(--text-tertiary)] font-mono-data text-[11px]">
-                            {s.status === "completed" ? "Done" : live?.message || "Queued"}
+                          <span
+                            className="text-[var(--text-tertiary)] font-mono-data text-[11px]"
+                            title={s.error_message || undefined}
+                          >
+                            {s.status === "completed"
+                              ? "Done"
+                              : s.status === "failed"
+                              ? (s.error_message ? (s.error_message.length > 25 ? s.error_message.slice(0, 25) + "…" : s.error_message) : "Failed")
+                              : live?.message || "Queued"}
                           </span>
                         )}
                       </td>

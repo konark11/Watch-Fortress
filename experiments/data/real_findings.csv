@@ -1,15 +1,276 @@
 finding_id,scanner,asset_id,ip,port,protocol,service,cve,title,severity,description
 DB-000001,nuclei,LAB-45-33-32-156,45.33.32.156,,tcp,,,Apache mod_negotiation - Pseudo Directory Listing,low,"Detected Apache server with mod_negotiation and MultiViews enabled, exposing a pseudo directory listing when invalid Accept headers are sent to extensionless filenames.
 "
-DB-000002,nuclei,LAB-45-33-32-156,45.33.32.156,22,tcp,,CVE-2023-48795,OpenSSH Terrapin Attack - Detection,medium,"The SSH transport protocol with certain OpenSSH extensions, found in OpenSSH before 9.6 and other products, allows remote attackers to bypass integrity checks such that some packets are omitted (from the extension negotiation message), and a client and server may consequently end up with a connection for which some security features have been downgraded or disabled, aka a Terrapin attack. This occurs because the SSH Binary Packet Protocol (BPP), implemented by these extensions, mishandles the handshake phase and mishandles use of sequence numbers. For example, there is an effective attack against SSH's use of ChaCha20-Poly1305 (and CBC with Encrypt-then-MAC). The bypass occurs in chacha20-poly1305@openssh.com and (if CBC is used) the -etm@openssh.com MAC algorithms. This also affects Maverick Synergy Java SSH API before 3.1.0-SNAPSHOT, Dropbear through 2022.83, Ssh before 5.1.1 in Erlang/OTP, PuTTY before 0.80, AsyncSSH before 2.14.2, golang.org/x/crypto before 0.17.0, libssh before 0.10.6, libssh2 through 1.11.0, Thorn Tech SFTP Gateway before 3.4.6, Tera Term before 5.1, Paramiko before 3.4.0, jsch before 0.2.15, SFTPGo before 2.5.6, Netgate pfSense Plus through 23.09.1, Netgate pfSense CE through 2.7.2, HPN-SSH through 18.2.0, ProFTPD before 1.3.8b (and before 1.3.9rc2), ORYX CycloneSSH before 2.3.4, NetSarang XShell 7 before Build 0144, CrushFTP before 10.6.0, ConnectBot SSH library before 2.2.22, Apache MINA sshd through 2.11.0, sshj through 0.37.0, TinySSH through 20230101, trilead-ssh2 6401, LANCOM LCOS and LANconfig, FileZilla before 3.66.4, Nova before 11.8, PKIX-SSH before 14.4, SecureCRT before 9.4.3, Transmit5 before 5.10.4, Win32-OpenSSH before 9.5.0.0p1-Beta, WinSCP before 6.2.2, Bitvise SSH Server before 9.32, Bitvise SSH Client before 9.33, KiTTY through 0.76.1.13, the net-ssh gem 7.2.0 for Ruby, the mscdex ssh2 module before 1.15.0 for Node.js, the thrussh library before 0.35.1 for Rust, and the Russh crate before 0.40.2 for Rust.
+DB-000002,nuclei,LAB-45-33-32-156,45.33.32.156,22,tcp,ssh,CVE-2023-48795,OpenSSH Terrapin Attack - Detection,medium,"The SSH transport protocol with certain OpenSSH extensions, found in OpenSSH before 9.6 and other products, allows remote attackers to bypass integrity checks such that some packets are omitted (from the extension negotiation message), and a client and server may consequently end up with a connection for which some security features have been downgraded or disabled, aka a Terrapin attack. This occurs because the SSH Binary Packet Protocol (BPP), implemented by these extensions, mishandles the handshake phase and mishandles use of sequence numbers. For example, there is an effective attack against SSH's use of ChaCha20-Poly1305 (and CBC with Encrypt-then-MAC). The bypass occurs in chacha20-poly1305@openssh.com and (if CBC is used) the -etm@openssh.com MAC algorithms. This also affects Maverick Synergy Java SSH API before 3.1.0-SNAPSHOT, Dropbear through 2022.83, Ssh before 5.1.1 in Erlang/OTP, PuTTY before 0.80, AsyncSSH before 2.14.2, golang.org/x/crypto before 0.17.0, libssh before 0.10.6, libssh2 through 1.11.0, Thorn Tech SFTP Gateway before 3.4.6, Tera Term before 5.1, Paramiko before 3.4.0, jsch before 0.2.15, SFTPGo before 2.5.6, Netgate pfSense Plus through 23.09.1, Netgate pfSense CE through 2.7.2, HPN-SSH through 18.2.0, ProFTPD before 1.3.8b (and before 1.3.9rc2), ORYX CycloneSSH before 2.3.4, NetSarang XShell 7 before Build 0144, CrushFTP before 10.6.0, ConnectBot SSH library before 2.2.22, Apache MINA sshd through 2.11.0, sshj through 0.37.0, TinySSH through 20230101, trilead-ssh2 6401, LANCOM LCOS and LANconfig, FileZilla before 3.66.4, Nova before 11.8, PKIX-SSH before 14.4, SecureCRT before 9.4.3, Transmit5 before 5.10.4, Win32-OpenSSH before 9.5.0.0p1-Beta, WinSCP before 6.2.2, Bitvise SSH Server before 9.32, Bitvise SSH Client before 9.33, KiTTY through 0.76.1.13, the net-ssh gem 7.2.0 for Ruby, the mscdex ssh2 module before 1.15.0 for Node.js, the thrussh library before 0.35.1 for Rust, and the Russh crate before 0.40.2 for Rust.
 "
-DB-000003,nuclei,LAB-45-33-32-156,45.33.32.156,22,tcp,,,SSH Diffie-Hellman Modulus <= 1024 Bits,low,"SSH weak algorithms are outdated cryptographic methods that pose security risks. Identifying and disabling these vulnerable algorithms is crucial for enhancing the overall security of SSH connections.
+DB-000003,nuclei,LAB-45-33-32-156,45.33.32.156,22,tcp,ssh,,SSH Diffie-Hellman Modulus <= 1024 Bits,low,"SSH weak algorithms are outdated cryptographic methods that pose security risks. Identifying and disabling these vulnerable algorithms is crucial for enhancing the overall security of SSH connections.
 "
-DB-000004,nuclei,LAB-45-33-32-156,45.33.32.156,22,tcp,,,SSH Weak Algorithms Supported,medium,"SSH weak algorithms are outdated cryptographic methods that pose security risks. Identifying and disabling these vulnerable algorithms is crucial for enhancing the overall security of SSH connections.
+DB-000004,nuclei,LAB-45-33-32-156,45.33.32.156,22,tcp,ssh,,SSH Weak Algorithms Supported,medium,"SSH weak algorithms are outdated cryptographic methods that pose security risks. Identifying and disabling these vulnerable algorithms is crucial for enhancing the overall security of SSH connections.
 "
-DB-000005,nuclei,LAB-45-33-32-156,45.33.32.156,22,tcp,,,SSH Server CBC Mode Ciphers Enabled,low,"""SSH Server CBC Mode Ciphers Enabled"" signifies that the SSH server supports Cipher Block Chaining (CBC) mode ciphers, which are known for potential vulnerabilities. This configuration poses a security risk, and it's recommended to disable CBC ciphers in favor of more secure alternatives for enhanced protection during data transmission.
+DB-000005,nuclei,LAB-45-33-32-156,45.33.32.156,22,tcp,ssh,,SSH Server CBC Mode Ciphers Enabled,low,"""SSH Server CBC Mode Ciphers Enabled"" signifies that the SSH server supports Cipher Block Chaining (CBC) mode ciphers, which are known for potential vulnerabilities. This configuration poses a security risk, and it's recommended to disable CBC ciphers in favor of more secure alternatives for enhanced protection during data transmission.
 "
-DB-000006,nuclei,LAB-45-33-32-156,45.33.32.156,22,tcp,,,SSH Weak MAC Algorithms Enabled,low,"The system's SSH configuration poses a security risk by allowing weak Message Authentication Code (MAC) algorithms, potentially exposing it to vulnerabilities and unauthorized access. It is crucial to update and strengthen the MAC algorithms for enhanced security.
+DB-000006,nuclei,LAB-45-33-32-156,45.33.32.156,22,tcp,ssh,,SSH Weak MAC Algorithms Enabled,low,"The system's SSH configuration poses a security risk by allowing weak Message Authentication Code (MAC) algorithms, potentially exposing it to vulnerabilities and unauthorized access. It is crucial to update and strengthen the MAC algorithms for enhanced security.
 "
-DB-000007,nuclei,LAB-45-33-32-156,45.33.32.156,22,tcp,,,SSH Weak Key Exchange Algorithms Enabled,low,"SSH Weak Key Exchange Algorithms Enabled indicates that the SSH server or client is configured to allow the use of less secure key exchange methods, posing a potential security risk during the establishment of secure connections. It's crucial to update configurations to prioritize stronger key exchange algorithms.
+DB-000007,nuclei,LAB-45-33-32-156,45.33.32.156,22,tcp,ssh,,SSH Weak Key Exchange Algorithms Enabled,low,"SSH Weak Key Exchange Algorithms Enabled indicates that the SSH server or client is configured to allow the use of less secure key exchange methods, posing a potential security risk during the establishment of secure connections. It's crucial to update configurations to prioritize stronger key exchange algorithms.
+"
+DB-000008,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,WAF Detection,info,A web application firewall was detected.
+DB-000009,nuclei,LAB-178-79-134-182,178.79.134.182,6379,tcp,redis,,Redis  < 8.2.1 Lua Long-String Delimiter - Out-of-Bounds Read,high,"Redis is an open source, in-memory database that persists on disk. Versions 8.2.1 and below allow an authenticated user to use a specially crafted LUA script to read out-of-bound data or crash the server and subsequent denial of service. The problem exists in all versions of Redis with Lua scripting. This issue is fixed in version 8.2.2. To workaround this issue without patching the redis-server executable is to prevent users from executing Lua scripts. This can be done using ACL to block a script by restricting both the EVAL and FUNCTION command families.
+"
+DB-000010,nuclei,LAB-178-79-134-182,178.79.134.182,6379,tcp,redis,,Redis < 8.2.1 lua script - Integer Overflow,critical,"Redis is an open source, in-memory database that persists on disk. Versions 8.2.1 and below allow an authenticated user to use a specially crafted Lua script to cause an integer overflow and potentially lead to remote code execution The problem exists in all versions of Redis with Lua scripting. This issue is fixed in version 8.2.2.
+"
+DB-000011,nuclei,LAB-178-79-134-182,178.79.134.182,6379,tcp,redis,,Redis Lua Sandbox < 8.2.2 - Cross-User Escape,high,"Redis is an open source, in-memory database that persists on disk. Versions 8.2.1 and below allow an authenticated user to use a specially crafted Lua script to manipulate different LUA objects and potentially run their own code in the context of another user. The problem exists in all versions of Redis with LUA scripting. This issue is fixed in version 8.2.2. A workaround to mitigate the problem without patching the redis-server executable is to prevent users from executing LUA scripts. This can be done using ACL to block a script by restricting both the EVAL and FUNCTION command families.
+"
+DB-000012,nuclei,LAB-178-79-134-182,178.79.134.182,6379,tcp,redis,,Redis Lua Parser < 8.2.2 - Use After Free,critical,"Redis is an open source, in-memory database that persists on disk. Versions 8.2.1 and below allow an authenticated user to use a specially crafted Lua script to manipulate the garbage collector, trigger a use-after-free and potentially lead to remote code execution. The problem exists in all versions of Redis with Lua scripting. This issue is fixed in version 8.2.2. To workaround this issue without patching the redis-server executable is to prevent users from executing Lua scripts. This can be done using ACL to restrict EVAL and EVALSHA commands.
+"
+DB-000013,nuclei,LAB-178-79-134-182,178.79.134.182,6379,tcp,redis,,Redis - Default Logins,high,"Redis service was accessed with easily guessed credentials.
+"
+DB-000014,nuclei,LAB-178-79-134-182,178.79.134.182,6379,tcp,redis,,Redis Info - Detect,info,"Retrieves information (such as version number and architecture) from a Redis key-value store.
+"
+DB-000015,nuclei,LAB-178-79-134-182,178.79.134.182,6379,tcp,redis,,Redis Server - Unauthenticated Access,high,Redis server without any required authentication was discovered.
+DB-000016,nuclei,LAB-178-79-134-182,178.79.134.182,443,tcp,https,,TLS Version - Detect,info,"TLS version detection is a security process used to determine the version of the Transport Layer Security (TLS) protocol used by a computer or server.
+It is important to detect the TLS version in order to ensure secure communication between two computers or servers.
+"
+DB-000017,nuclei,LAB-178-79-134-182,178.79.134.182,443,tcp,https,,TLS Version - Detect,info,"TLS version detection is a security process used to determine the version of the Transport Layer Security (TLS) protocol used by a computer or server.
+It is important to detect the TLS version in order to ensure secure communication between two computers or servers.
+"
+DB-000018,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,Nginx version detect,info,Some nginx servers have the version on the response header. Useful when you need to find specific CVEs on your targets.
+DB-000019,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,Missing Subresource Integrity,info,"Checks if external script and stylesheet tags in the HTML response are missing the Subresource Integrity (SRI) attribute.
+"
+DB-000020,nuclei,LAB-64-176-191-126,64.176.191.126,,tcp,,,RDAP WHOIS,info,"RDAP (Registration Data Access Protocol) is a standard defined by the IETF to replace the whois protocol
+in queries for information about Internet resource records such as domain names, IP addresses, and ASNs.
+"
+DB-000021,nuclei,LAB-64-176-191-126,64.176.191.126,,tcp,,,RDAP WHOIS,info,"RDAP (Registration Data Access Protocol) is a standard defined by the IETF to replace the whois protocol
+in queries for information about Internet resource records such as domain names, IP addresses, and ASNs.
+"
+DB-000022,nuclei,LAB-64-176-191-126,64.176.191.126,,tcp,,,RDAP WHOIS,info,"RDAP (Registration Data Access Protocol) is a standard defined by the IETF to replace the whois protocol
+in queries for information about Internet resource records such as domain names, IP addresses, and ASNs.
+"
+DB-000023,nuclei,LAB-64-176-191-126,64.176.191.126,,tcp,,,RDAP WHOIS,info,"RDAP (Registration Data Access Protocol) is a standard defined by the IETF to replace the whois protocol
+in queries for information about Internet resource records such as domain names, IP addresses, and ASNs.
+"
+DB-000024,nuclei,LAB-64-176-191-126,64.176.191.126,,tcp,,,RDAP WHOIS,info,"RDAP (Registration Data Access Protocol) is a standard defined by the IETF to replace the whois protocol
+in queries for information about Internet resource records such as domain names, IP addresses, and ASNs.
+"
+DB-000025,nuclei,LAB-64-176-191-126,64.176.191.126,,tcp,,,RDAP WHOIS,info,"RDAP (Registration Data Access Protocol) is a standard defined by the IETF to replace the whois protocol
+in queries for information about Internet resource records such as domain names, IP addresses, and ASNs.
+"
+DB-000026,nuclei,LAB-64-176-191-126,64.176.191.126,,tcp,,,RDAP WHOIS,info,"RDAP (Registration Data Access Protocol) is a standard defined by the IETF to replace the whois protocol
+in queries for information about Internet resource records such as domain names, IP addresses, and ASNs.
+"
+DB-000027,nuclei,LAB-64-176-191-126,64.176.191.126,,tcp,,,RDAP WHOIS,info,"RDAP (Registration Data Access Protocol) is a standard defined by the IETF to replace the whois protocol
+in queries for information about Internet resource records such as domain names, IP addresses, and ASNs.
+"
+DB-000028,nuclei,LAB-64-176-191-126,64.176.191.126,,tcp,,,RDAP WHOIS,info,"RDAP (Registration Data Access Protocol) is a standard defined by the IETF to replace the whois protocol
+in queries for information about Internet resource records such as domain names, IP addresses, and ASNs.
+"
+DB-000029,nuclei,LAB-64-176-191-126,64.176.191.126,,tcp,,,RDAP WHOIS,info,"RDAP (Registration Data Access Protocol) is a standard defined by the IETF to replace the whois protocol
+in queries for information about Internet resource records such as domain names, IP addresses, and ASNs.
+"
+DB-000030,nuclei,LAB-64-176-191-126,64.176.191.126,,tcp,,,RDAP WHOIS,info,"RDAP (Registration Data Access Protocol) is a standard defined by the IETF to replace the whois protocol
+in queries for information about Internet resource records such as domain names, IP addresses, and ASNs.
+"
+DB-000031,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000032,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000033,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000034,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000035,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000036,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000037,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000038,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000039,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000040,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000041,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,FingerprintHub Technology Fingerprint,info,FingerprintHub Technology Fingerprint tests run in nuclei.
+DB-000042,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,Wappalyzer Technology Detection,info,
+DB-000043,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,Wappalyzer Technology Detection,info,
+DB-000044,nuclei,LAB-178-79-134-182,178.79.134.182,,tcp,,,Wappalyzer Technology Detection,info,
+DB-000045,nuclei,LAB-pentest-ground-com,pentest-ground.com,,tcp,,,CAA Record,info,A CAA record was discovered. A CAA record is used to specify which certificate authorities (CAs) are allowed to issue certificates for a domain.
+DB-000046,nuclei,LAB-pentest-ground-com,pentest-ground.com,,tcp,,,MX Record Detection,info,An MX record was detected. MX records direct emails to a mail exchange server.
+DB-000047,nuclei,LAB-pentest-ground-com,pentest-ground.com,,tcp,,,NS Record Detection,info,An NS record was detected. An NS record delegates a subdomain to a set of name servers.
+DB-000048,nuclei,LAB-pentest-ground-com,pentest-ground.com,,tcp,,,DNS TXT Record Detected,info,A DNS TXT record was detected. The TXT record lets a domain admin leave notes on a DNS server.
+DB-000049,nuclei,LAB-178-79-134-182,178.79.134.182,443,tcp,https,,Detect SSL Certificate Issuer,info,"Extract the issuer's organization from the target's certificate. Issuers are entities which sign and distribute certificates.
+"
+DB-000050,nuclei,LAB-178-79-134-182,178.79.134.182,443,tcp,https,,SSL DNS Names,info,"Extract the Subject Alternative Name (SAN) from the target's certificate. SAN facilitates the usage of additional hostnames with the same certificate.
+"
+DB-000051,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,CVE-2017-12635,Apache CouchDB 1.7.0 / 2.x < 2.1.1 - Remote Privilege Escalation,critical,"Due to differences in the Erlang-based JSON parser and JavaScript-based JSON parser, it is possible in Apache CouchDB before 1.7.0 and 2.x before 2.1.1 to submit _users documents with duplicate keysfor 'roles' used for access control within the database, including the special case '_admin' role, that denotes administrative users. In combination with CVE-2017-12636 (Remote Code Execution), this can be used to give non-admin users access to arbitrary shell commands on the server as the database system user. The JSON parser differences result in behavior that if two 'roles' keys are available in the JSON, the second one will be used for authorizing the document write, but the first 'roles' key is used for subsequent authorization for the newly created user. By design, users can not assign themselves roles. The vulnerability allows non-admin users to give themselves admin privileges."
+DB-000052,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,Apache CouchDB - Unauthenticated Access,high,Apache CouchDB is exposed to external users.
+DB-000053,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000054,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000055,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000056,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000057,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000058,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000059,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000060,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000061,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000062,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000063,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,Allowed Options Method,info,
+DB-000064,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,Apache CouchDB Panel - Detect,info,Apache CouchDB panel was detected.
+DB-000065,nuclei,LAB-127-0-0-1,127.0.0.1,5984,tcp,,,CouchDB Admin Default - Detect,high,CouchDB is susceptible to requests in the context of an admin user.
+DB-000066,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,CVE-2012-1823,PHP CGI v5.3.12/5.4.2 Remote Code Execution,high,"sapi/cgi/cgi_main.c in PHP before 5.3.12 and 5.4.x before 5.4.2, when configured as a CGI script (aka php-cgi), does not properly handle query strings that lack an = (equals sign) character, which allows remote attackers to execute arbitrary code by placing command-line options in the query string, related to lack of skipping a certain php_getopt for the 'd' case.
+"
+DB-000067,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,phpMyAdmin Panel - Detect,info,phpMyAdmin panel was detected.
+DB-000068,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,PHPinfo Page - Detect,low,"PHPinfo page was detected. The output of the phpinfo() command can reveal sensitive and detailed PHP environment information.
+"
+DB-000069,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,Apache mod_negotiation - Pseudo Directory Listing,low,"Detected Apache server with mod_negotiation and MultiViews enabled, exposing a pseudo directory listing when invalid Accept headers are sent to extensionless filenames.
+"
+DB-000070,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP TRACE method enabled,info,
+DB-000071,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,PHP Detect,info,
+DB-000072,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,WAF Detection,info,A web application firewall was detected.
+DB-000073,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,CVE-2026-109618,PHP2Shell (CVE-2026-109618/CVE-2026-109619) - Active Crash Detection,critical,"PHP uses longjmp() for out-of-memory (OOM) errors to exit the current context and abort handling of the request. Some contexts may not properly account for this scenario and leave request memory in an uninitialized state before performing an allocation. The subsequent request cleanup procedure may read or branch on this memory. Multiple OOM strategies can consistently trigger this condition and lead to remote code execution (RCE).
+"
+DB-000074,nuclei,LAB-172-17-82-5,172.17.82.5,445,tcp,netbios-ssn,CVE-2026-4480,Samba Printing Subsystem - Remote Code Execution,critical,"A flaw was found in the Samba printing subsystem. Samba passes the client-controlled job description string to the command configured with the ""print command"" setting via the ""%J"" substitution character without escaping shell meta characters. A remote attacker could exploit this vulnerability by sending a specially crafted print job description that contains unescaped shell characters. This could lead to remote code execution on the affected system.
+"
+DB-000075,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,Postgres - Default Logins,high,"Postgres service was accessed with easily guessed credentials.
+"
+DB-000076,nuclei,LAB-172-17-82-5,172.17.82.5,5900,tcp,vnc,,VNC Default Login,high,"The VNC service had been accessed using easily guessed credentials.Weak credentials allowed unauthorized access to the VNC service.
+"
+DB-000077,nuclei,LAB-172-17-82-5,172.17.82.5,5900,tcp,vnc,,VNC Default Login,high,"The VNC service had been accessed using easily guessed credentials.Weak credentials allowed unauthorized access to the VNC service.
+"
+DB-000078,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Auth Methods - Detection,info,"SSH (Secure Shell) authentication modes are methods used to verify the identity of users and ensure secure access to remote systems. Common SSH authentication modes include password-based authentication, which relies on a secret passphrase, and public key authentication, which uses cryptographic keys for a more secure and convenient login process. Additionally, multi-factor authentication (MFA) can be employed to enhance security by requiring users to provide multiple forms of authentication, such as a password and a one-time code.
+"
+DB-000079,nuclei,LAB-172-17-82-5,172.17.82.5,445,tcp,netbios-ssn,,Samba - Detection,info,"Samba allows file and print sharing between computers running Microsoft Windows and computers running Unix. It is an implementation of dozens of services and a dozen protocols, including: NetBIOS over TCP/IP (NBT) SMB (known as CIFS in some versions)
+"
+DB-000080,nuclei,LAB-172-17-82-5,172.17.82.5,445,tcp,netbios-ssn,,SMB v1 Supported - Detection,info,"This indicates that the system or application possesses the functionality to operate with SMB version 1. Supporting SMBv1 enables the system to engage in communication utilizing the SMB protocol at its version 1.0.
+"
+DB-000081,nuclei,LAB-172-17-82-5,172.17.82.5,445,tcp,netbios-ssn,,NTLM Information - Detection,info,"Windows New Technology LAN Manager (NTLM) is a suite of security protocols offered by Microsoft to authenticate users' identity and protect the integrity and confidentiality of their activity. At its core, NTLM is a single sign on (SSO) tool that relies on a challenge-response protocol to confirm the user without requiring them to submit a password.
+"
+DB-000082,nuclei,LAB-172-17-82-5,172.17.82.5,445,tcp,netbios-ssn,,SMB Version - Detection,info,"SMB version detection involves identifying the specific Server Message Block protocol version used by a system or network. This process is crucial for ensuring compatibility and security, as different SMB versions may have distinct features and vulnerabilities.
+"
+DB-000083,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,Postgresql Default Database - Enumeration,high,"postgres is the default database you will connect to before you have created any other databases.
+"
+DB-000084,nuclei,LAB-172-17-82-5,172.17.82.5,513,tcp,login,,Rlogin Detect,info,"rlogin was a remote login protocol that allowed users to access UNIX systems over TCP port 513.  It transmitted credentials and session data in plaintext, which made it insecure and obsolete once SSH was introduced.
+"
+DB-000085,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Diffie-Hellman Modulus <= 1024 Bits,low,"SSH weak algorithms are outdated cryptographic methods that pose security risks. Identifying and disabling these vulnerable algorithms is crucial for enhancing the overall security of SSH connections.
+"
+DB-000086,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Server Software Enumeration,info,
+DB-000087,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Password-based Authentication,info,
+DB-000088,nuclei,LAB-172-17-82-5,172.17.82.5,3306,tcp,mysql,,MySQL Info - Enumeration,info,"Connects to a MySQL server and prints information such as the protocol and version numbers
+"
+DB-000089,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,Postgresql Default Database - Enumeration,high,"postgres is the default database you will connect to before you have created any other databases.
+"
+DB-000090,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,Postgresql Default Database - Enumeration,high,"postgres is the default database you will connect to before you have created any other databases.
+"
+DB-000091,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,Postgresql Default Database - Enumeration,high,"postgres is the default database you will connect to before you have created any other databases.
+"
+DB-000092,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH SHA-1 HMAC Algorithms Enabled,info,"The SSH server at the remote end is set up to allow the use of SHA-1 HMAC algorithms.
+"
+DB-000093,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Weak Algorithms Supported,medium,"SSH weak algorithms are outdated cryptographic methods that pose security risks. Identifying and disabling these vulnerable algorithms is crucial for enhancing the overall security of SSH connections.
+"
+DB-000094,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Server CBC Mode Ciphers Enabled,low,"""SSH Server CBC Mode Ciphers Enabled"" signifies that the SSH server supports Cipher Block Chaining (CBC) mode ciphers, which are known for potential vulnerabilities. This configuration poses a security risk, and it's recommended to disable CBC ciphers in favor of more secure alternatives for enhanced protection during data transmission.
+"
+DB-000095,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Weak MAC Algorithms Enabled,low,"The system's SSH configuration poses a security risk by allowing weak Message Authentication Code (MAC) algorithms, potentially exposing it to vulnerabilities and unauthorized access. It is crucial to update and strengthen the MAC algorithms for enhanced security.
+"
+DB-000096,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Weak Key Exchange Algorithms Enabled,low,"SSH Weak Key Exchange Algorithms Enabled indicates that the SSH server or client is configured to allow the use of less secure key exchange methods, posing a potential security risk during the establishment of secure connections. It's crucial to update configurations to prioritize stronger key exchange algorithms.
+"
+DB-000097,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,Postgresql Empty Password - Detect,critical,"Postgresql has a flaw that allows the attacker to login with empty password.
+"
+DB-000098,nuclei,LAB-172-17-82-5,172.17.82.5,137,tcp,,,NetBIOS Name Service (NBTStat) - Detect,info,"Detects NetBIOS Name Service on UDP port 137 using an NBTStat query to identify Windows network hosts.
+"
+DB-000099,nuclei,LAB-172-17-82-5,172.17.82.5,111,tcp,rpcbind,,RPC Portmapper (UDP) - Detect,info,"Detects Sun RPC Portmapper (rpcbind) service on UDP port 111 using amap and Nmap RPC probes for reliable identification. An exposed Portmapper may reveal RPC services like NFS or NIS and enable further enumeration or attacks.
+"
+DB-000100,nuclei,LAB-172-17-82-5,172.17.82.5,3632,tcp,,CVE-2004-2687,Distccd v1 - Remote Code Execution,high,"distcc 2.x, as used in XCode 1.5 and others, when not configured to restrict access to the server port, allows remote attackers to execute arbitrary commands via compilation jobs, which are executed by the server without authorization checks.
+"
+DB-000101,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,CVE-2015-1419,vsftpd <= 3.0.2 - Access Restriction Bypass,medium,"vsftpd 3.0.2 and earlier contain a vulnerability that allows remote attackers to bypass access restrictions due to improper parsing of the deny_file configuration directive.
+"
+DB-000102,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,CVE-2021-30047,vsftpd < 3.0.3 - DoS,high,"vsftpd before 3.0.3 allows remote attackers to cause a denial of service by sending a crafted FTP command.
+"
+DB-000103,nuclei,LAB-172-17-82-5,172.17.82.5,8009,tcp,ajp13,CVE-2020-1938,Ghostcat - Apache Tomcat - AJP File Read/Inclusion Vulnerability,critical,"When using the Apache JServ Protocol (AJP), care must be taken when trusting incoming connections to Apache Tomcat. Tomcat treats AJP connections as having higher trust than, for example, a similar HTTP connection. If such connections are available to an attacker, they can be exploited in ways that may be surprising. In Apache Tomcat 9.0.0.M1 to 9.0.0.30, 8.5.0 to 8.5.50 and 7.0.0 to 7.0.99, Tomcat shipped with an AJP Connector enabled by default that listened on all configured IP addresses. It was expected (and recommended in the security guide) that this Connector would be disabled if not required. This vulnerability report identified a mechanism that allowed - returning arbitrary files from anywhere in the web application - processing any file in the web application as a JSP Further, if the web application allowed file upload and stored those files within the web application (or the attacker was able to control the content of the web application by some other means) then this, along with the ability to process a file as a JSP, made remote code execution possible. It is important to note that mitigation is only required if an AJP port is accessible to untrusted users. Users wishing to take a defence-in-depth approach and block the vector that permits returning arbitrary files and execution as JSP may upgrade to Apache Tomcat 9.0.31, 8.5.51 or 7.0.100 or later. A number of changes were made to the default AJP Connector configuration in 9.0.31 to harden the default configuration. It is likely that users upgrading to 9.0.31, 8.5.51 or 7.0.100 or later will need to make small changes to their configurations."
+DB-000104,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000105,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000106,nuclei,LAB-172-17-82-5,172.17.82.5,8009,tcp,ajp13,,AJP Protocol Detection,info,
+DB-000107,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Detect,info,"FTP service was detected.
+"
+DB-000108,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,vsFTPd Service - Detect,info,vsFTPd FTP service was detected.
+DB-000109,nuclei,LAB-172-17-82-5,172.17.82.5,2049,tcp,nfs,,NFSv3 Exposed,info,"This version of the protocol did not implement native encryption and transmitted all data in clear text over the network. Also, this version of NFSv3 relied on client IP address and UID/GID matching for authentication,mechanisms that were easily bypassed by attackers with control over their client machines.
+"
+DB-000110,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,PostgreSQL Authentication - Detect,info,"PostgreSQL authentication error messages which could reveal information useful in formulating further attacks were detected.
+"
+DB-000111,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,OpenSSH Service - Detect,info,"OpenSSH service was detected.
+"
+DB-000112,nuclei,LAB-172-17-82-5,172.17.82.5,6200,tcp,,CVE-2011-2523,VSFTPD 2.3.4 - Backdoor Command Execution,critical,"VSFTPD v2.3.4 had a serious backdoor vulnerability allowing attackers to execute arbitrary commands on the server with root-level access. The backdoor was triggered by a specific string of characters in a user login request, which allowed attackers to execute any command they wanted.
+"
+DB-000113,nuclei,LAB-172-17-82-5,172.17.82.5,5900,tcp,vnc,,VNC Service Detection,info,A Virtual Network Computing (VNC) service was detected.
+DB-000114,nuclei,LAB-172-17-82-5,172.17.82.5,25,tcp,smtp,,SMTP Detection,info,"SMTP is part of the application layer of the TCP/IP protocol. Using a process called “store and forward,” SMTP moves your email on and across networks.
+"
+DB-000115,nuclei,LAB-172-17-82-5,172.17.82.5,25,tcp,smtp,,ESMTP - Detect,info,"ESMTP was detected.
+"
+DB-000116,nuclei,LAB-172-17-82-5,172.17.82.5,25,tcp,smtp,,SMTP Commands Enumeration,info,"Attempts to use EHLO and HELP to gather the Extended commands supported by an SMTP server.
+"
+DB-000117,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000118,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Anonymous Login,medium,"Anonymous FTP access allows anyone to access your public_ftp folder, allowing unidentified visitors to download (and possibly upload) files on your website. Anonymous FTP creates the potential for a security hole for hackers and is not recommended.
+"
+DB-000119,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000120,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000121,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000122,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000123,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000124,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,Wappalyzer Technology Detection,info,
+DB-000125,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000126,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000127,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000128,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000129,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000130,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000131,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000132,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000133,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000134,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000135,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,Apache Detection,info,Some Apache servers have the version on the response header. The OpenSSL version can be also obtained
+DB-000136,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,Apache HTTP Server End-of-Life - Detect,info,"Detected Apache HTTP Server versions that have reached End-of-Life (EOL) and no longer receive security updates.
+"
+DB-000137,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,PHP End-of-Life - Detect,info,"Detected PHP versions that have reached End-of-Life (EOL) and no longer receive security updates.
+"
+DB-000138,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,Apache ActiveMQ Default Login,high,Apache ActiveMQ default login credentials were discovered.
+DB-000139,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,CVE-2026-34197,Apache ActiveMQ - Remote Code Execution,critical,"Improper Input Validation, Improper Control of Generation of Code ('Code Injection') vulnerability in Apache ActiveMQ Broker, Apache ActiveMQ. Apache ActiveMQ Classic exposes the Jolokia JMX-HTTP bridge at /api/jolokia/ on the web console. The default Jolokia access policy permits exec operations on all ActiveMQ MBeans (org.apache.activemq:*), including BrokerService.addNetworkConnector(String) and BrokerService.addConnector(String). An authenticated attacker can invoke these operations with a crafted discovery URI that triggers the VM transport's brokerConfig parameter to load a remote Spring XML application context using ResourceXmlApplicationContext. Because Spring's ResourceXmlApplicationContext instantiates all singleton beans before the BrokerService validates the configuration, arbitrary code execution occurs on the broker's JVM through bean factory methods such as Runtime.exec(). This issue affects Apache ActiveMQ Broker: before 5.19.4, from 6.0.0 before 6.2.3; Apache ActiveMQ: . Users are recommended to upgrade to version 5.19.5 or 6.2.3, which fixes the issue.
+"
+DB-000140,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,Basic Auth Detection,info,
+DB-000141,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000142,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000143,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000144,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000145,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000146,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000147,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000148,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000149,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000150,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
 "
