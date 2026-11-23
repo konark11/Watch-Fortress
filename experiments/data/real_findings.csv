@@ -274,3 +274,126 @@ DB-000149,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,HTTP Missing Security Header
 "
 DB-000150,nuclei,LAB-127-0-0-1,127.0.0.1,8161,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
 "
+DB-000151,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,CVE-2012-1823,PHP CGI v5.3.12/5.4.2 Remote Code Execution,high,"sapi/cgi/cgi_main.c in PHP before 5.3.12 and 5.4.x before 5.4.2, when configured as a CGI script (aka php-cgi), does not properly handle query strings that lack an = (equals sign) character, which allows remote attackers to execute arbitrary code by placing command-line options in the query string, related to lack of skipping a certain php_getopt for the 'd' case.
+"
+DB-000152,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,phpMyAdmin Panel - Detect,info,phpMyAdmin panel was detected.
+DB-000153,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,PHPinfo Page - Detect,low,"PHPinfo page was detected. The output of the phpinfo() command can reveal sensitive and detailed PHP environment information.
+"
+DB-000154,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP TRACE method enabled,info,
+DB-000155,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,Apache mod_negotiation - Pseudo Directory Listing,low,"Detected Apache server with mod_negotiation and MultiViews enabled, exposing a pseudo directory listing when invalid Accept headers are sent to extensionless filenames.
+"
+DB-000156,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,PHP Detect,info,
+DB-000157,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,WAF Detection,info,A web application firewall was detected.
+DB-000158,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,CVE-2026-109618,PHP2Shell (CVE-2026-109618/CVE-2026-109619) - Active Crash Detection,critical,"PHP uses longjmp() for out-of-memory (OOM) errors to exit the current context and abort handling of the request. Some contexts may not properly account for this scenario and leave request memory in an uninitialized state before performing an allocation. The subsequent request cleanup procedure may read or branch on this memory. Multiple OOM strategies can consistently trigger this condition and lead to remote code execution (RCE).
+"
+DB-000159,nuclei,LAB-172-17-82-5,172.17.82.5,5900,tcp,vnc,,VNC Default Login,high,"The VNC service had been accessed using easily guessed credentials.Weak credentials allowed unauthorized access to the VNC service.
+"
+DB-000160,nuclei,LAB-172-17-82-5,172.17.82.5,3306,tcp,mysql,,MySQL Info - Enumeration,info,"Connects to a MySQL server and prints information such as the protocol and version numbers
+"
+DB-000161,nuclei,LAB-172-17-82-5,172.17.82.5,5900,tcp,vnc,,VNC Default Login,high,"The VNC service had been accessed using easily guessed credentials.Weak credentials allowed unauthorized access to the VNC service.
+"
+DB-000162,nuclei,LAB-172-17-82-5,172.17.82.5,513,tcp,login,,Rlogin Detect,info,"rlogin was a remote login protocol that allowed users to access UNIX systems over TCP port 513.  It transmitted credentials and session data in plaintext, which made it insecure and obsolete once SSH was introduced.
+"
+DB-000163,nuclei,LAB-172-17-82-5,172.17.82.5,445,tcp,netbios-ssn,,NTLM Information - Detection,info,"Windows New Technology LAN Manager (NTLM) is a suite of security protocols offered by Microsoft to authenticate users' identity and protect the integrity and confidentiality of their activity. At its core, NTLM is a single sign on (SSO) tool that relies on a challenge-response protocol to confirm the user without requiring them to submit a password.
+"
+DB-000164,nuclei,LAB-172-17-82-5,172.17.82.5,445,tcp,netbios-ssn,CVE-2026-4480,Samba Printing Subsystem - Remote Code Execution,critical,"A flaw was found in the Samba printing subsystem. Samba passes the client-controlled job description string to the command configured with the ""print command"" setting via the ""%J"" substitution character without escaping shell meta characters. A remote attacker could exploit this vulnerability by sending a specially crafted print job description that contains unescaped shell characters. This could lead to remote code execution on the affected system.
+"
+DB-000165,nuclei,LAB-172-17-82-5,172.17.82.5,445,tcp,netbios-ssn,,Samba - Detection,info,"Samba allows file and print sharing between computers running Microsoft Windows and computers running Unix. It is an implementation of dozens of services and a dozen protocols, including: NetBIOS over TCP/IP (NBT) SMB (known as CIFS in some versions)
+"
+DB-000166,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,Postgresql Default Database - Enumeration,high,"postgres is the default database you will connect to before you have created any other databases.
+"
+DB-000167,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,Postgresql Default Database - Enumeration,high,"postgres is the default database you will connect to before you have created any other databases.
+"
+DB-000168,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Auth Methods - Detection,info,"SSH (Secure Shell) authentication modes are methods used to verify the identity of users and ensure secure access to remote systems. Common SSH authentication modes include password-based authentication, which relies on a secret passphrase, and public key authentication, which uses cryptographic keys for a more secure and convenient login process. Additionally, multi-factor authentication (MFA) can be employed to enhance security by requiring users to provide multiple forms of authentication, such as a password and a one-time code.
+"
+DB-000169,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,Postgresql Default Database - Enumeration,high,"postgres is the default database you will connect to before you have created any other databases.
+"
+DB-000170,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,Postgresql Default Database - Enumeration,high,"postgres is the default database you will connect to before you have created any other databases.
+"
+DB-000171,nuclei,LAB-172-17-82-5,172.17.82.5,445,tcp,netbios-ssn,,SMB v1 Supported - Detection,info,"This indicates that the system or application possesses the functionality to operate with SMB version 1. Supporting SMBv1 enables the system to engage in communication utilizing the SMB protocol at its version 1.0.
+"
+DB-000172,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,Postgres - Default Logins,high,"Postgres service was accessed with easily guessed credentials.
+"
+DB-000173,nuclei,LAB-172-17-82-5,172.17.82.5,445,tcp,netbios-ssn,,SMB Version - Detection,info,"SMB version detection involves identifying the specific Server Message Block protocol version used by a system or network. This process is crucial for ensuring compatibility and security, as different SMB versions may have distinct features and vulnerabilities.
+"
+DB-000174,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Diffie-Hellman Modulus <= 1024 Bits,low,"SSH weak algorithms are outdated cryptographic methods that pose security risks. Identifying and disabling these vulnerable algorithms is crucial for enhancing the overall security of SSH connections.
+"
+DB-000175,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH SHA-1 HMAC Algorithms Enabled,info,"The SSH server at the remote end is set up to allow the use of SHA-1 HMAC algorithms.
+"
+DB-000176,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Password-based Authentication,info,
+DB-000177,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Server Software Enumeration,info,
+DB-000178,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Server CBC Mode Ciphers Enabled,low,"""SSH Server CBC Mode Ciphers Enabled"" signifies that the SSH server supports Cipher Block Chaining (CBC) mode ciphers, which are known for potential vulnerabilities. This configuration poses a security risk, and it's recommended to disable CBC ciphers in favor of more secure alternatives for enhanced protection during data transmission.
+"
+DB-000179,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Weak Key Exchange Algorithms Enabled,low,"SSH Weak Key Exchange Algorithms Enabled indicates that the SSH server or client is configured to allow the use of less secure key exchange methods, posing a potential security risk during the establishment of secure connections. It's crucial to update configurations to prioritize stronger key exchange algorithms.
+"
+DB-000180,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Weak Algorithms Supported,medium,"SSH weak algorithms are outdated cryptographic methods that pose security risks. Identifying and disabling these vulnerable algorithms is crucial for enhancing the overall security of SSH connections.
+"
+DB-000181,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,SSH Weak MAC Algorithms Enabled,low,"The system's SSH configuration poses a security risk by allowing weak Message Authentication Code (MAC) algorithms, potentially exposing it to vulnerabilities and unauthorized access. It is crucial to update and strengthen the MAC algorithms for enhanced security.
+"
+DB-000182,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,Postgresql Empty Password - Detect,critical,"Postgresql has a flaw that allows the attacker to login with empty password.
+"
+DB-000183,nuclei,LAB-172-17-82-5,172.17.82.5,137,tcp,,,NetBIOS Name Service (NBTStat) - Detect,info,"Detects NetBIOS Name Service on UDP port 137 using an NBTStat query to identify Windows network hosts.
+"
+DB-000184,nuclei,LAB-172-17-82-5,172.17.82.5,111,tcp,rpcbind,,RPC Portmapper (UDP) - Detect,info,"Detects Sun RPC Portmapper (rpcbind) service on UDP port 111 using amap and Nmap RPC probes for reliable identification. An exposed Portmapper may reveal RPC services like NFS or NIS and enable further enumeration or attacks.
+"
+DB-000185,nuclei,LAB-172-17-82-5,172.17.82.5,3632,tcp,,CVE-2004-2687,Distccd v1 - Remote Code Execution,high,"distcc 2.x, as used in XCode 1.5 and others, when not configured to restrict access to the server port, allows remote attackers to execute arbitrary commands via compilation jobs, which are executed by the server without authorization checks.
+"
+DB-000186,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,CVE-2015-1419,vsftpd <= 3.0.2 - Access Restriction Bypass,medium,"vsftpd 3.0.2 and earlier contain a vulnerability that allows remote attackers to bypass access restrictions due to improper parsing of the deny_file configuration directive.
+"
+DB-000187,nuclei,LAB-172-17-82-5,172.17.82.5,8009,tcp,ajp13,CVE-2020-1938,Ghostcat - Apache Tomcat - AJP File Read/Inclusion Vulnerability,critical,"When using the Apache JServ Protocol (AJP), care must be taken when trusting incoming connections to Apache Tomcat. Tomcat treats AJP connections as having higher trust than, for example, a similar HTTP connection. If such connections are available to an attacker, they can be exploited in ways that may be surprising. In Apache Tomcat 9.0.0.M1 to 9.0.0.30, 8.5.0 to 8.5.50 and 7.0.0 to 7.0.99, Tomcat shipped with an AJP Connector enabled by default that listened on all configured IP addresses. It was expected (and recommended in the security guide) that this Connector would be disabled if not required. This vulnerability report identified a mechanism that allowed - returning arbitrary files from anywhere in the web application - processing any file in the web application as a JSP Further, if the web application allowed file upload and stored those files within the web application (or the attacker was able to control the content of the web application by some other means) then this, along with the ability to process a file as a JSP, made remote code execution possible. It is important to note that mitigation is only required if an AJP port is accessible to untrusted users. Users wishing to take a defence-in-depth approach and block the vector that permits returning arbitrary files and execution as JSP may upgrade to Apache Tomcat 9.0.31, 8.5.51 or 7.0.100 or later. A number of changes were made to the default AJP Connector configuration in 9.0.31 to harden the default configuration. It is likely that users upgrading to 9.0.31, 8.5.51 or 7.0.100 or later will need to make small changes to their configurations."
+DB-000188,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,CVE-2021-30047,vsftpd < 3.0.3 - DoS,high,"vsftpd before 3.0.3 allows remote attackers to cause a denial of service by sending a crafted FTP command.
+"
+DB-000189,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Anonymous Login,medium,"Anonymous FTP access allows anyone to access your public_ftp folder, allowing unidentified visitors to download (and possibly upload) files on your website. Anonymous FTP creates the potential for a security hole for hackers and is not recommended.
+"
+DB-000190,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Detect,info,"FTP service was detected.
+"
+DB-000191,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,vsFTPd Service - Detect,info,vsFTPd FTP service was detected.
+DB-000192,nuclei,LAB-172-17-82-5,172.17.82.5,2049,tcp,nfs,,NFSv3 Exposed,info,"This version of the protocol did not implement native encryption and transmitted all data in clear text over the network. Also, this version of NFSv3 relied on client IP address and UID/GID matching for authentication,mechanisms that were easily bypassed by attackers with control over their client machines.
+"
+DB-000193,nuclei,LAB-172-17-82-5,172.17.82.5,22,tcp,ssh,,OpenSSH Service - Detect,info,"OpenSSH service was detected.
+"
+DB-000194,nuclei,LAB-172-17-82-5,172.17.82.5,5432,tcp,postgresql,,PostgreSQL Authentication - Detect,info,"PostgreSQL authentication error messages which could reveal information useful in formulating further attacks were detected.
+"
+DB-000195,nuclei,LAB-172-17-82-5,172.17.82.5,6200,tcp,,CVE-2011-2523,VSFTPD 2.3.4 - Backdoor Command Execution,critical,"VSFTPD v2.3.4 had a serious backdoor vulnerability allowing attackers to execute arbitrary commands on the server with root-level access. The backdoor was triggered by a specific string of characters in a user login request, which allowed attackers to execute any command they wanted.
+"
+DB-000196,nuclei,LAB-172-17-82-5,172.17.82.5,5900,tcp,vnc,,VNC Service Detection,info,A Virtual Network Computing (VNC) service was detected.
+DB-000197,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000198,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000199,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000200,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000201,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000202,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000203,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000204,nuclei,LAB-172-17-82-5,172.17.82.5,21,tcp,ftp,,FTP Service - Credential Weakness,high,An FTP service was accessed with easily guessed credentials.
+DB-000205,nuclei,LAB-172-17-82-5,172.17.82.5,25,tcp,smtp,,SMTP Detection,info,"SMTP is part of the application layer of the TCP/IP protocol. Using a process called “store and forward,” SMTP moves your email on and across networks.
+"
+DB-000206,nuclei,LAB-172-17-82-5,172.17.82.5,25,tcp,smtp,,ESMTP - Detect,info,"ESMTP was detected.
+"
+DB-000207,nuclei,LAB-172-17-82-5,172.17.82.5,25,tcp,smtp,,SMTP Commands Enumeration,info,"Attempts to use EHLO and HELP to gather the Extended commands supported by an SMTP server.
+"
+DB-000208,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,Apache Detection,info,Some Apache servers have the version on the response header. The OpenSSL version can be also obtained
+DB-000209,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,Apache HTTP Server End-of-Life - Detect,info,"Detected Apache HTTP Server versions that have reached End-of-Life (EOL) and no longer receive security updates.
+"
+DB-000210,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,PHP End-of-Life - Detect,info,"Detected PHP versions that have reached End-of-Life (EOL) and no longer receive security updates.
+"
+DB-000211,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,Wappalyzer Technology Detection,info,
+DB-000212,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000213,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000214,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000215,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000216,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000217,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000218,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000219,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000220,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
+DB-000221,nuclei,LAB-172-17-82-5,172.17.82.5,,tcp,,,HTTP Missing Security Headers,info,"This template searches for missing HTTP security headers. The impact of these missing headers can vary.
+"
